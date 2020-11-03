@@ -54,7 +54,7 @@ class HeartyPatch_TCP_Parser:
     ces_pkt_ecg_bytes  = 4  # Field(s) to hold ECG data
 
     # Used to be 3
-    Expected_Type = 1
+    Expected_Type = 3
 
     min_packet_size = 19
 
@@ -249,8 +249,8 @@ def finish():
 
 
 if __name__== "__main__":
-    max_packets= 1000
-    max_seconds = 5 # default recording duration is 10min
+    max_packets= 10000
+    max_seconds = 25 # default recording duration is 10min
     hp_host = 'heartypatch.local'
 
     get_heartypatch_data(max_packets=max_packets, max_seconds=max_seconds, hp_host=hp_host)
