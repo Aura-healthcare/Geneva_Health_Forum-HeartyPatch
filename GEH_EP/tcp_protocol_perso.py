@@ -27,6 +27,7 @@ hp_host = '192.168.0.106'
 hp_port = 4567
 fname = 'log.csv'
 
+
 class HeartyPatch_TCP_Parser:
 
     # Packet Validation
@@ -175,10 +176,8 @@ class HeartyPatch_TCP_Parser:
 
                 self.packet_count += 1                    
                 self.state = self.CESState_Init
-                self.data = self.data[self.CES_CMDIF_PKT_OVERHEAD+pkt_len+2:]    # start from beginning
-                
-                
-            
+                self.data = self.data[self.CES_CMDIF_PKT_OVERHEAD+pkt_len+2:]    # start from beginning       
+
 
 soc = None
 hp = None
@@ -255,6 +254,7 @@ def finish():
 
 
 if __name__== "__main__":
+    
     max_packets= 10000
     max_seconds = 25 # default recording duration is 10min
     hp_host = 'heartypatch.local'
