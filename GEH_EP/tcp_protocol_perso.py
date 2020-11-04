@@ -70,6 +70,7 @@ class HeartyPatch_TCP_Parser:
         self.all_rtor = []
         self.all_hr = []
         self.all_ecg = []
+        self.df = pd.DataFrame(columns =['EEG'])
         pass
 
     def add_data(self, new_data):
@@ -167,6 +168,9 @@ class HeartyPatch_TCP_Parser:
                 while ptr < pkt_len:
                     ecg = struct.unpack('<i', payload[ptr:ptr+4])[0] / 1000.0
                     self.all_ecg.append(ecg)
+                    self.df = self.df.append({'EEG':ecg}, ignore_index=True)
+                    sys.stdout.write(ecg)
+                    sys.stdout.flush()
                     ptr += self.ces_pkt_ecg_bytes
 
                 self.packet_count += 1                    
@@ -210,7 +214,7 @@ def get_heartypatch_data(max_packets=10000, hp_host='192.168.0.106', max_seconds
     while max_packets == -1 or hp.packet_count < max_packets:
         txt = soc.recv(16*1024)
         hp.add_data(txt)
-#        hp.process_packets()
+       hp.process_packets()
         i += 1
     # useful?        
 
@@ -246,6 +250,8 @@ def finish():
     text_file = open("output.txt", "w")
     n = text_file.write(str(hp.data))
     text_file.close()
+
+    hp.df.to_csv('df.csv')
 
 
 if __name__== "__main__":

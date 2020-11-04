@@ -193,7 +193,6 @@ tStart = None
 def get_heartypatch_data(max_packets=10000, hp_host='192.168.0.106', max_seconds=-1):
     global soc
     global hp
-    global tStart
 
     tcp_reads = 0
 
@@ -321,7 +320,7 @@ if __name__ == "__main__" and not is_interactive():
 #    max_packets= -1
     max_packets= 1000
     #max_seconds = 10*60 
-    max_seconds = 10 # default recording duration is 10min
+    max_seconds = 25 # default recording duration is 10min
     fname = 'log.csv'
     hp_host = 'heartypatch.local'
     show_plot = True
