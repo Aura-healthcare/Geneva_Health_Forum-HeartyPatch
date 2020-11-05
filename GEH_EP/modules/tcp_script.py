@@ -284,6 +284,7 @@ def finish():
 
 def start_stream():
 
+    print('starting stream')
     soc = None
     hp = None
     tStart = None
