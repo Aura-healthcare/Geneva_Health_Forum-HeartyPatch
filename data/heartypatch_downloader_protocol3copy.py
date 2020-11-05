@@ -57,17 +57,15 @@ class HeartyPatch_TCP_Parser:
     CES_CMDIF_PKT_OVERHEAD = 5
     CES_CMDIF_PKT_DATA = CES_CMDIF_PKT_OVERHEAD
 
-
     ces_pkt_seq_bytes   = 4  # Buffer for Sequence ID
     ces_pkt_ts_bytes   = 8  # Buffer for Timestamp
     ces_pkt_rtor_bytes = 4  # R-R Interval Buffer
-    #ces_pkt_ecg_bytes  = 4  # Field(s) to hold ECG data
     ces_pkt_ecg_bytes  = 4 # Field(s) to hold ECG data
 
     Expected_Type = 3        # new format
-    
+
     min_packet_size = 19
-    
+
     def __init__(self):
         self.state = self.CESState_Init
         self.data = ''
@@ -82,12 +80,12 @@ class HeartyPatch_TCP_Parser:
         self.all_ecg = []
         self.df = pd.DataFrame(columns =['EEG'])
         pass
-    
+
     def add_data(self, new_data):
         self.data += new_data
         self.total_bytes += len(new_data)
-    
-    
+
+
     def process_packets(self):
         while len(self.data) >= self.min_packet_size:
             if self.state == self.CESState_Init:
@@ -107,7 +105,7 @@ class HeartyPatch_TCP_Parser:
                     continue
             elif self.state == self.CESState_SOF2_Found:
                 # sanity check header for expected values
-                
+
                 pkt_len = 256 * ord(self.data[self.CES_CMDIF_IND_LEN_MSB]) + ord(self.data[self.CES_CMDIF_IND_LEN])
                 # Make sure we have a full packet
                 if len(self.data) < (self.CES_CMDIF_PKT_OVERHEAD + pkt_len + 2):
@@ -177,12 +175,12 @@ class HeartyPatch_TCP_Parser:
                 while ptr < pkt_len:
                     ecg = struct.unpack('<i', payload[ptr:ptr+4])[0] / 1000.0
                     self.all_ecg.append(ecg)
-                    self.df = self.df.append({'EEG':ecg}, ignore_index=True)
+                    self.df = self.df.append({'EEG': ecg}, ignore_index=True)
                     print(ecg)
                     sys.stdout.flush()
                     ptr += self.ces_pkt_ecg_bytes
 
-                self.packet_count += 1                    
+                self.packet_count += 1
                 self.state = self.CESState_Init
                 self.data = self.data[self.CES_CMDIF_PKT_OVERHEAD+pkt_len+2:]    # start from beginning
 
@@ -317,15 +315,15 @@ def help():
     sys.exit(0)
 
 if __name__ == "__main__" and not is_interactive():
+
 #    max_packets= -1
     max_packets= 1000
-    #max_seconds = 10*60 
-    max_seconds = 25 # default recording duration is 10min
+    max_seconds = 1*60 # default recording duration is 10min
     fname = 'log.csv'
     hp_host = 'heartypatch.local'
     show_plot = True
     # Modified
-    
+
     i = 1
     while i < len(sys.argv):
         if sys.argv[i] == '-f' and i < len(sys.argv)-1:

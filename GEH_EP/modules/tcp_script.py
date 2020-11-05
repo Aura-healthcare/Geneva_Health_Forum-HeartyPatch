@@ -21,14 +21,20 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.signal as signal
 import time
-from datetime import datetime
+import datetime
 
 hp_host = '192.168.0.106'
 hp_port = 4567
-fname = 'log.csv'
+
+
+
 
 
 class HeartyPatch_TCP_Parser:
+
+    # Create a class to store TCP protocol info and received info
+    # 'add_data' add received bytes to data
+    # 'process_packets' checks for integrity and output the info
 
     # Packet Validation
     CESState_Init = 0
@@ -111,28 +117,27 @@ class HeartyPatch_TCP_Parser:
                     or self.data[self.CES_CMDIF_PKT_OVERHEAD+pkt_len+1] != self.CES_CMDIF_PKT_STOP):
 
                     print('unexpected_type')
-#                    if True:
-#                          print('pkt_len', pkt_len)
-#                          print(self.data[self.CES_CMDIF_IND_PKTTYPE], self.Expected_Type)
-#                          print(self.data[self.CES_CMDIF_IND_PKTTYPE] != self.Expected_Type)
-#                    
-#                          for j in range(0, self.CES_CMDIF_PKT_OVERHEAD):
-#                              print format(ord(self.data[j]),'02x'),
-#                          print
-#
-#                            for j in range(self.CES_CMDIF_PKT_OVERHEAD, self.CES_CMDIF_PKT_OVERHEAD+pkt_len):
-#                                print format(ord(self.data[j]),'02x'),
-#                            print
-#    
-#                            for j in range(self.CES_CMDIF_PKT_OVERHEAD+pkt_len, self.CES_CMDIF_PKT_OVERHEAD+pkt_len+2):
-#                                print format(ord(self.data[j]),'02x'),
-#                            print
-#                            print self.CES_CMDIF_PKT_STOP,
-#                            print ord(self.data[self.CES_CMDIF_PKT_OVERHEAD+pkt_len+2]) != self.CES_CMDIF_PKT_STOP
-#                            print
-#                        pass
+                    #if True:
+                    #      print('pkt_len', pkt_len)
+                    #      print(self.data[self.CES_CMDIF_IND_PKTTYPE], self.Expected_Type)
+                    #      print(self.data[self.CES_CMDIF_IND_PKTTYPE] != self.Expected_Type)
+                    #
+                    #      for j in range(0, self.CES_CMDIF_PKT_OVERHEAD):
+                    #          print format(ord(self.data[j]),'02x'),
+                    #      print
 
-                # unexpected packet format
+                    #        for j in range(self.CES_CMDIF_PKT_OVERHEAD, self.CES_CMDIF_PKT_OVERHEAD+pkt_len):
+                    #            print format(ord(self.data[j]),'02x'),
+                    #        print
+
+                    #        for j in range(self.CES_CMDIF_PKT_OVERHEAD+pkt_len, self.CES_CMDIF_PKT_OVERHEAD+pkt_len+2):
+                    #            print format(ord(self.data[j]),'02x'),
+                    #        print
+                    #        print self.CES_CMDIF_PKT_STOP,
+                    #        print ord(self.data[self.CES_CMDIF_PKT_OVERHEAD+pkt_len+2]) != self.CES_CMDIF_PKT_STOP
+                    #        print
+                    #    pass
+                    # unexpected packet format
                     self.state = self.CESState_Init
                     self.data = self.data[1:]    # start from beginning
                     self.bytes_skipped += 1
@@ -223,7 +228,15 @@ def get_heartypatch_data(
         txt = soc.recv(16*1024)
         hp.add_data(txt)
         hp.process_packets()
-        ## Insert here Data Link with streamlit
+
+        ### DATA HANDLING
+        x, y = graph_data_handler.update_graph_data(
+            df_ecg=hp.df,
+            time_window=time_window)
+        graph_generation(chart, x, y, slider_y_axis, data_freq)
+        
+
+        ###
         i += 1
 
     # useful?
@@ -243,6 +256,9 @@ def get_heartypatch_data(
 
 
 def finish():
+
+    # After the the stream, export data
+
     global soc
     global hp
     global tStart
@@ -251,18 +267,34 @@ def finish():
     if soc is not None:
         soc.close()
 
+    # Saving global log
+    header = 'seq, timestamp, rtor, hr'
+    np.savetxt('../data/results/log_{}.csv'.format(str(datetime.datetime.today())),
+               zip(hp.all_seq, hp.all_ts, hp.all_rtor, hp.all_hr),
+               fmt=('%d', '%.3f', '%d', '%d'),
+               header=header, delimiter=',')
 
-
-    ptr = fname.rfind('.')
-    fname_ecg =  fname[:ptr] + '_ecg' + fname[ptr:]
-
-    np.savetxt(fname_ecg, hp.all_ecg, header='ECG')
-
-    text_file = open("output.txt", "w")
+    # Saving raw data
+    text_file = open("../data/results/output_{}.txt".format(str(datetime.datetime.today())), "w")
     n = text_file.write(str(hp.data))
     text_file.close()
 
-    hp.df.to_csv('df.csv', index=False)
+    # Saving EEG data in DataFrame format
+    hp.df.to_csv('../data/results/df_{}.csv'.format(str(datetime.datetime.today())), index=False)
+
+def start_stream():
+
+    soc = None
+    hp = None
+    tStart = None
+
+    max_packets= 10000
+    max_seconds = 25 # default recording duration is 10min
+    hp_host = 'heartypatch.local'
+
+    get_heartypatch_data(max_packets=max_packets, max_seconds=max_seconds, hp_host=hp_host)
+    finish()
+    print('Properly Run!')
 
 
 if __name__== "__main__":
@@ -274,3 +306,4 @@ if __name__== "__main__":
     get_heartypatch_data(max_packets=max_packets, max_seconds=max_seconds, hp_host=hp_host)
     finish()
     print('Properly Run!')
+

@@ -11,12 +11,15 @@ from modules.graph_utilities import (generate_graph_data_handler,
 from modules.data_simulation import data_simulation
 import datetime
 
+## TO DO
+## RENAME time_window to "number of steps"
+
 
 # loading simuluation data
 
 @st.cache(allow_output_mutation=True, suppress_st_warning=True)
 def load_example_ecg_data():
-    df_ecg = pd.read_csv('data/Simulation/df_simualation.csv')
+    df_ecg = pd.read_csv('data/simulation/df_simualation.csv')
     return df_ecg
 
 
@@ -48,7 +51,7 @@ st.sidebar.write('Graph actualisation freq :',
 
 # Initializing time window
 
-st.sidebar.subheader(body='Parameters')
+st.sidebar.subheader('Parameters')
 
 time_window_slider = st.sidebar.slider(
     label='Seconds to display:',
@@ -65,7 +68,7 @@ timer_offset = simulation_step * data_freq
 # st.write('Data period', round(1/data_freq,3))
 # st.write('time_window:',time_window)
 # st.write('timer_offset:',timer_offset)
-
+#
 
 # Loading graph data handler
 
