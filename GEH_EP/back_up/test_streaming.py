@@ -22,14 +22,17 @@ import matplotlib.pyplot as plt
 import scipy.signal as signal
 import time
 from datetime import datetime
+
+hp_host = '192.168.0.106'
+hp_port = 4567
+fname = 'log.csv'
+
 from modules.graph_utilities import generate_graph_data_handler
 
 
 max_packets= 10000
 max_seconds = 5 # default recording duration is 10min
 hp_host = 'heartypatch.local'
-hp_port = 4567
-fname = 'log.csv'
 df_ecg = pd.DataFrame(columns=['ECG'], data=[0])
 time_window = 5
 graph_data_handler = generate_graph_data_handler(df_ecg=df_ecg,

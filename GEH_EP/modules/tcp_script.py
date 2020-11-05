@@ -10,36 +10,33 @@
 # In Python3
 
 import socket
-from pprint import pprint
-import os
+# from pprint import pprint
+# import os
 import sys
-import signal as sys_signal
+# import signal as sys_signal
 import struct
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import scipy.signal as signal
+# import matplotlib.pyplot as plt
+# import scipy.signal as signal
 import time
-import datetime
+# from datetime import datetime
+from modules.graph_utilities import generate_graph_data_handler
 
-from modules.graph_utilities import (generate_graph_data_handler,
-                                     graph_generation)
-import streamlit as st
 
-hp_host = '192.168.0.106'
+max_packets = 10000
+max_seconds = 5  # default recording duration is 10min
+hp_host = 'heartypatch.local'
 hp_port = 4567
-
-
-
+fname = 'log.csv'
+df_ecg = pd.DataFrame(columns=['ECG'], data=[0])
+time_window = 5
+graph_data_handler = generate_graph_data_handler(df_ecg=df_ecg,
+                                                 time_window=time_window)
 
 
 class HeartyPatch_TCP_Parser:
-
-
-    # Create a class to store TCP protocol info and received info
-    # 'add_data' add received bytes to data
-    # 'process_packets' checks for integrity and output the info
 
     # Packet Validation
     CESState_Init = 0
@@ -59,11 +56,10 @@ class HeartyPatch_TCP_Parser:
     CES_CMDIF_PKT_OVERHEAD = 5
     CES_CMDIF_PKT_DATA = CES_CMDIF_PKT_OVERHEAD
 
-
-    ces_pkt_seq_bytes   = 4  # Buffer for Sequence ID
-    ces_pkt_ts_bytes   = 8  # Buffer for Timestamp
+    ces_pkt_seq_bytes = 4  # Buffer for Sequence ID
+    ces_pkt_ts_bytes = 8  # Buffer for Timestamp
     ces_pkt_rtor_bytes = 4  # R-R Interval Buffer
-    ces_pkt_ecg_bytes  = 4  # Field(s) to hold ECG data
+    ces_pkt_ecg_bytes = 4  # Field(s) to hold ECG data
 
     # Used to be 3
     Expected_Type = 3
@@ -82,8 +78,10 @@ class HeartyPatch_TCP_Parser:
         self.all_rtor = []
         self.all_hr = []
         self.all_ecg = []
-        self.df = pd.DataFrame(columns =['ECG'])
-
+        self.df = pd.DataFrame(columns=['ECG'])
+        self.df_ecg = pd.DataFrame(columns=['ECG'], data=[0])
+        self.time_window = 5
+        # Remove?
         pass
 
     def add_data(self, new_data):
@@ -119,39 +117,41 @@ class HeartyPatch_TCP_Parser:
                     print('break')
                     break
 
-                if (self.data[self.CES_CMDIF_IND_PKTTYPE]  != self.Expected_Type
+                if (self.data[self.CES_CMDIF_IND_PKTTYPE] != self.Expected_Type
                     or self.data[self.CES_CMDIF_PKT_OVERHEAD+pkt_len+1] != self.CES_CMDIF_PKT_STOP):
 
                     print('unexpected_type')
-                    #if True:
-                    #      print('pkt_len', pkt_len)
-                    #      print(self.data[self.CES_CMDIF_IND_PKTTYPE], self.Expected_Type)
-                    #      print(self.data[self.CES_CMDIF_IND_PKTTYPE] != self.Expected_Type)
-                    #
-                    #      for j in range(0, self.CES_CMDIF_PKT_OVERHEAD):
-                    #          print format(ord(self.data[j]),'02x'),
-                    #      print
+#                    if True:
+#                          print('pkt_len', pkt_len)
+#                          print(self.data[self.CES_CMDIF_IND_PKTTYPE], self.Expected_Type)
+#                          print(self.data[self.CES_CMDIF_IND_PKTTYPE] != self.Expected_Type)
+#
+#                          for j in range(0, self.CES_CMDIF_PKT_OVERHEAD):
+#                              print format(ord(self.data[j]),'02x'),
+#                          print
+#
+#                            for j in range(self.CES_CMDIF_PKT_OVERHEAD, self.CES_CMDIF_PKT_OVERHEAD+pkt_len):
+#                                print format(ord(self.data[j]),'02x'),
+#                            print
+#
+#                            for j in range(self.CES_CMDIF_PKT_OVERHEAD+pkt_len, self.CES_CMDIF_PKT_OVERHEAD+pkt_len+2):
+#                                print format(ord(self.data[j]),'02x'),
+#                            print
+#                            print self.CES_CMDIF_PKT_STOP,
+#                            print ord(self.data[self.CES_CMDIF_PKT_OVERHEAD+pkt_len+2]) != self.CES_CMDIF_PKT_STOP
+#                            print
+#                        pass
 
-                    #        for j in range(self.CES_CMDIF_PKT_OVERHEAD, self.CES_CMDIF_PKT_OVERHEAD+pkt_len):
-                    #            print format(ord(self.data[j]),'02x'),
-                    #        print
-
-                    #        for j in range(self.CES_CMDIF_PKT_OVERHEAD+pkt_len, self.CES_CMDIF_PKT_OVERHEAD+pkt_len+2):
-                    #            print format(ord(self.data[j]),'02x'),
-                    #        print
-                    #        print self.CES_CMDIF_PKT_STOP,
-                    #        print ord(self.data[self.CES_CMDIF_PKT_OVERHEAD+pkt_len+2]) != self.CES_CMDIF_PKT_STOP
-                    #        print
-                    #    pass
-                    # unexpected packet format
+                # Unexpected packet format
                     self.state = self.CESState_Init
                     self.data = self.data[1:]    # start from beginning
                     self.bytes_skipped += 1
                     self.bad_packet_count += 1
                     continue
 
-                        # Parse Payload
-                payload = self.data[self.CES_CMDIF_PKT_OVERHEAD:self.CES_CMDIF_PKT_OVERHEAD+pkt_len+1]
+                # Parse Payload
+                payload = self.data[self.CES_CMDIF_PKT_OVERHEAD:
+                                    self.CES_CMDIF_PKT_OVERHEAD+pkt_len+1]
 
                 ptr = 0
                 # Process Sequence ID
@@ -184,8 +184,8 @@ class HeartyPatch_TCP_Parser:
                     ecg = struct.unpack('<i', payload[ptr:ptr+4])[0] / 1000.0
                     self.all_ecg.append(ecg)
                     self.df = self.df.append({'ECG': ecg}, ignore_index=True)
-                    #sys.stdout.write(str(ecg)+str('\n'))
-                    #sys.stdout.flush()
+                    # graph_data_handler.update_graph_data(self.df,
+                    # self.time_window)
                     ptr += self.ces_pkt_ecg_bytes
 
                 self.packet_count += 1
@@ -193,17 +193,12 @@ class HeartyPatch_TCP_Parser:
                 # start from beginning
                 self.data = self.data[self.CES_CMDIF_PKT_OVERHEAD+pkt_len+2:]
 
-                #sys.stdout.write('\n Packet Processed')
-                #sys.stdout.flush()
 
-
-soc = None
-hp = None
+hp = HeartyPatch_TCP_Parser()
 tStart = None
 
-class connect_hearty_patch:
 
-    global connect_hearty_patch
+class connect_hearty_patch:
 
     def __init__(self, hp_host='heartypatch.local', hp_port=4567):
 
@@ -211,63 +206,56 @@ class connect_hearty_patch:
 
         self.hp_host = hp_host
         self.hp_port = hp_port
-        self.sock = socket.create_connection((self.hp_host, self.hp_port))
-
 
         # Try connecting, if not close the conection and restart
 
         try:
-            print('attempt_1')
             self.sock = socket.create_connection((self.hp_host, self.hp_port))
-            print('socket created')
+            print('Socket created\n')
         except Exception:
-            print('attempt_2')
+            print('Second attempt of connexion...\n')
             try:
                 self.sock.close()
             except Exception:
                 pass
             self.sock = socket.create_connection((self.hp_host, self.hp_port))
-            print('socket created after attempt')
-
-        print(self.sock)
+            print('Socket created after attempt\n')
 
 
+connexion = connect_hearty_patch()
+socket_test = connexion.sock
 
 
 def get_heartypatch_data(
-    max_packets=10000,
-    hp_host='heartypatch.local',
-    max_seconds=5):
-
-    print('\n Starting data Streamin')
+        max_packets=10000,
+        hp_host='192.168.0.106',
+        max_seconds=5):
 
     global soc
     global hp
 
-
     tcp_reads = 0
-    hp = HeartyPatch_TCP_Parser()
-    print('\n Starting data Streamin')
+    # hp = HeartyPatch_TCP_Parser()
 
 # Try connecting, if not close the conection and restart
 
-    try:
-        soc = socket.create_connection((hp_host, hp_port))
-    except Exception:
-        try:
-            soc.close()
-        except Exception:
-            pass
-        soc = socket.create_connection((hp_host, hp_port))
+#    try:
+#        soc = socket.create_connection((hp_host, hp_port))
+#    except Exception:
+#        try:
+#            soc.close()
+#        except Exception:
+#            pass
+#        soc = socket.create_connection((hp_host, hp_port))
+#    print('point A')
+    soc = socket_test
+#    print(soc)
 
     sys.stdout.write('Connexion successful \n')
     sys.stdout.flush()
 
-    print('\n Starting data Streamin')
-
     i = 0
     pkt_last = 0
-    print(soc)
     txt = soc.recv(16*1024)  # discard any initial results
 
     tStart = time.time()
@@ -275,18 +263,7 @@ def get_heartypatch_data(
         txt = soc.recv(16*1024)
         hp.add_data(txt)
         hp.process_packets()
-
-        ### DATA HANDLING
-
-        sys.stdout.flush()
-
-        #sys.stdout.write('\n graph handler ok')
-        #sys.stdout.flush()
-
-        #graph_generation(chart, x, y, slider_y_axis, data_freq)
-        
-
-        ###
+        # Insert here Data Link with streamlit
         i += 1
 
     # useful?
@@ -304,106 +281,42 @@ def get_heartypatch_data(
         if time.time() - tStart > max_seconds:
             break
 
+    print(hp.df)
     return hp.df
 
+
 def finish():
-
-    # After the the stream, export data
-
-    sys.stdout.write('\nStarting finishing pipeline \n ')
-    sys.stdout.flush()
-
-    global soc
-    global hp
-    global tStart
-    global fname
+    # global soc
+    # global hp
+    # global tStart
+    # global fname
 
     if soc is not None:
         soc.close()
 
-    # Saving global log
+    ptr = fname.rfind('.')
+    fname_ecg = fname[:ptr] + '_ecg' + fname[ptr:]
 
-    #sys.stdout.write('Exporting global log \n ')
-    #sys.stdout.flush()
+    np.savetxt(fname_ecg, hp.all_ecg, header='ECG')
 
-    #header = 'seq, timestamp, rtor, hr'
-    #np.savetxt('data/results/log_{}.csv'.format(str(datetime.datetime.today())),
-    #           zip(hp.all_seq, hp.all_ts, hp.all_rtor, hp.all_hr),
-    #           fmt=('%d', '%.3f', '%d', '%d'),
-    #           header=header, delimiter=',')
+    text_file = open("output.txt", "w")
+    n = text_file.write(str(hp.data))
+    text_file.close()
 
-    # Saving raw data
-
-    # text_file = open("data/results/output_{}.txt".format(str(datetime.datetime.today())), "w")
-    # n = text_file.write(str(hp.data))
-    # text_file.close()
+    hp.df.to_csv('df.csv', index=False)
 
 
-    sys.stdout.write('Exporting ECG dataset\n ')
-    sys.stdout.flush()
+if __name__== "__main__":
 
-    # Saving ECG data in DataFrame format
-    hp.df.to_csv('data/results/df_{}.csv'.format(str(datetime.datetime.today())), index=False)
-
-    sys.stdout.write('All exported!\n')
-    sys.stdout.flush()
-
-
-df_ecg = pd.DataFrame(columns=['ECG'], data=[0])
-time_window = 5
-
-def start_stream(graph_data_handler=generate_graph_data_handler(df_ecg, time_window)):
-
-    print('Starting stream')
-    st.sidebar.write('Starting stream')
+    max_packets = 10000
+    max_seconds = 5  # default recording duration is 10min
     hp_host = 'heartypatch.local'
-    hp = None
-    tStart = None
-    socket = None
+    df_ecg = pd.DataFrame(columns=['ECG'], data=[0])
+    time_window = 5
 
-#    soc = socket
-
-    max_packets= 10000
-    max_seconds = 1 # default recording duration is 10min
-
-
-   # print('get_heartypatch_data stream')
-
- 
-    #connexion = connect_hearty_patch(hp_host=hp_host, hp_port=hp_port)
-    temp_df = get_heartypatch_data(max_packets=max_packets,
-                                   max_seconds=max_seconds,
-                                   hp_host=hp_host)
-
-    print('graph update')
-    sys.stdout.flush()
-
-    #x, y  = graph_data_handler.update_graph_data(temp_df, time_window)
-
-    #print(y)
-    #graph_generation(chart, x, y, slider_y_axis, data_freq)
-
-    if soc is not None:
-        soc.close()
-
-    if soc is not None:
-        soc.close()
-    
-
+    get_heartypatch_data(max_packets=max_packets,
+                         max_seconds=max_seconds,
+                         hp_host=hp_host)
 
     finish()
-    print('\n Properly Run! \n\n')
-
-    return temp_df
-
-
-
-# if __name__== "__main__":
-#
-#    max_packets= 10000
-#    max_seconds = 5 # default recording duration is 10min
-#    hp_host = 'heartypatch.local'
-#
-#    get_heartypatch_data(max_packets=max_packets, max_seconds=max_seconds, hp_host=hp_host)
-#    finish()
-
+    print('Properly Run!')
