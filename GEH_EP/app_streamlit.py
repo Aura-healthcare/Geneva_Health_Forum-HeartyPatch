@@ -1,13 +1,15 @@
 import streamlit as st
 import pandas as pd
 # import re
-import time
+# import time
 # from datetime import timedelta
 # import seaborn as sns
-import plotly.express as px
+# import plotly.express as px
 # import numpy as np
-from modules.graph_utilities import generate_graph_data_handler
+from modules.graph_utilities import (generate_graph_data_handler,
+                                     graph_generation)
 from modules.data_simulation import data_simulation
+import datetime
 
 
 # loading simuluation data
@@ -25,11 +27,24 @@ df_ecg_simulation = load_example_ecg_data()
 
 if checkbox_simulation is True:
     df_ecg = df_ecg_simulation
+    simulation_step = st.sidebar.slider(
+        label='Select data simulation value:',
+        min_value=0,
+        max_value=30,
+        step=1,
+        value=10)
+
+    n_data = 3207
+    sequence_duraration = 60
 
 else:
     pass
     # Add realtime use
 
+data_freq = sequence_duraration/n_data
+st.sidebar.write('Data freq :', str(round(data_freq*1000, 2)) + ' ms')
+st.sidebar.write('Graph actualisation freq :',
+                 str(round(simulation_step * data_freq*1000, 2)) + ' ms')
 
 # Initializing time window
 
@@ -40,10 +55,17 @@ time_window_slider = st.sidebar.slider(
     min_value=0,
     max_value=10,
     step=1,
-    value=3)
+    value=5)
 
 
-time_window = time_window_slider * 60
+time_window = round(time_window_slider / data_freq)
+timer_offset = simulation_step * data_freq
+
+# st.write('simulation_step', simulation_step)
+# st.write('Data period', round(1/data_freq,3))
+# st.write('time_window:',time_window)
+# st.write('timer_offset:',timer_offset)
+
 
 # Loading graph data handler
 
@@ -58,14 +80,16 @@ def load_graph_data_handler(df_ecg=df_ecg, time_window=time_window):
 # Loading data simulation function
 
 @st.cache(allow_output_mutation=True, suppress_st_warning=True)
-def load_data_simulation(df_ecg=df_ecg, time_window=time_window, step=15):
+def load_data_simulation(df_ecg=df_ecg,
+                         time_window=time_window,
+                         step=simulation_step):
     simulation = data_simulation(df_ecg=df_ecg,
                                  time_window=time_window,
                                  step=step)
     return simulation
 
 
-simulation = load_data_simulation(df_ecg, time_window, step=15)
+simulation = load_data_simulation(df_ecg, time_window, step=simulation_step)
 
 
 # Initialisation of the data
@@ -74,7 +98,7 @@ simulation = load_data_simulation(df_ecg, time_window, step=15)
 if checkbox_simulation is True:
     df_ecg = simulation.df_simulation_data
 
-graph_data_handler = load_graph_data_handler(df_ecg=df_ecg, 
+graph_data_handler = load_graph_data_handler(df_ecg=df_ecg,
                                              time_window=time_window)
 
 x, y = graph_data_handler.x_axis, graph_data_handler.y_axis
@@ -84,66 +108,45 @@ slider_y_axis = st.sidebar.slider(
     min_value=-1500,
     max_value=0,
     step=100,
-    value=(-1500, 0)
+    value=(-1200, -600)
 )
-
 
 # MAIN time_window
 st.title(body='ECG Visualization')
-time_ratio = 60/3207
 
-fig = px.line(x=x*time_ratio,
-              y=y,
-              title='Live EEG',
-              range_y=slider_y_axis,
-              color_discrete_sequence=['green'],
-              render_mode='svg',
-              template='plotly_white',
-              height=600,
-              labels={'x': 'seconds', 'y': 'ECG value'})
+chart = st.empty()
+graph_generation(chart, x, y, slider_y_axis, data_freq)
 
-chart = st.plotly_chart(figure_or_data=fig)
 
 st.sidebar.subheader(body='Actions:')
 
-if st.sidebar.button(label='reinitialize'):
-    pass
+if st.sidebar.button(label='Reinitialize'):
 
-iterations = 50
+    graph_data_handler.reinitialize()
+    simulation.reinitialize()
+    x, y = graph_data_handler.x_axis, graph_data_handler.y_axis
+    graph_generation(chart, x, y, slider_y_axis, data_freq)
 
-def update_graph(duration=60):
-    tStart = time.time()
-    if time.time() - tStart > duration:
-        break
-    else:
-
-
-if st.sidebar.button(label='Run !'):
+if st.sidebar.button(label='Start'):
 
     stop_value = 0
-    if st.sidebar.button(label='stop'):
+    if st.sidebar.button(label='Stop'):
         stop_value = 1
 
-    for i in range(iterations):
-        
-        chart.empty()
-  
-        if stop_value == 0:
-            simulation()
+    timer = datetime.datetime.today() + (
+        datetime.timedelta(seconds=timer_offset))
 
+    while stop_value == 0:
 
+        simulation()
         x, y = graph_data_handler.update_graph_data(
             df_ecg=simulation.df_simulation_data,
             time_window=time_window)
-        fig = px.line(x=x*time_ratio,
-                    y=y,
-                    title='Live EEG',
-                    range_y=slider_y_axis,
-                    color_discrete_sequence=['green'],
-                    render_mode='svg',
-                    template='plotly_white',
-                    height=600,
-                    labels={'x': 'seconds', 'y': 'ECG value'})
-        chart.plotly_chart(figure_or_data=fig)
 
-        time.sleep(time_ratio*simulation.step)
+        while (timer - (
+               datetime.datetime.today())) >= (
+               datetime.timedelta(seconds=0)):
+            pass
+
+        timer += datetime.timedelta(seconds=timer_offset)
+        graph_generation(chart, x, y, slider_y_axis, data_freq)

@@ -19,3 +19,9 @@ class data_simulation:
         self.ending_frame += self.step
         self.df_simulation_data = self.df_full_simulation_data.loc[
             self.starting_frame:self.ending_frame]
+
+    def reinitialize(self):
+        self.starting_frame = 0
+        self.ending_frame = self.starting_frame
+        self.df_simulation_data = self.df_full_simulation_data.loc[
+            self.starting_frame:self.starting_frame+1]

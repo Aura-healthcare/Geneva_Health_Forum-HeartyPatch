@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import plotly.express as px
 
 
 class generate_graph_data_handler():
@@ -11,9 +12,9 @@ class generate_graph_data_handler():
         self.starting_frame = 0
         self.ending_frame = self.starting_frame + self.time_window
         self.x_axis = np.arange(self.starting_frame, self.ending_frame+1)
+
         self.y_axis = self.df_graph_data['ECG'].\
             loc[self.starting_frame:self.ending_frame].values
-
         # Padding for
         temp_list = np.zeros(self.time_window + 1)
         temp_list[:len(self.y_axis)] = self.y_axis
@@ -42,3 +43,24 @@ class generate_graph_data_handler():
         self.y_axis = temp_list
 
         return self.x_axis, self.y_axis
+
+    def reinitialize(self):
+
+        self.starting_frame = 0
+        self.ending_frame = self.starting_frame + self.time_window
+        self.x_axis = np.arange(self.starting_frame, self.ending_frame+1)
+        self.y_axis = np.zeros(self.time_window + 1)
+
+
+def graph_generation(chart, x, y, slider_y_axis, data_freq):
+    fig = px.line(x=x*data_freq,
+                  y=y,
+                  title='Live EEG',
+                  range_y=slider_y_axis,
+                  color_discrete_sequence=['green'],
+                  render_mode='svg',
+                  template='plotly_white',
+                  height=600,
+                  labels={'x': 'seconds', 'y': 'ECG value'})
+    chart.empty()
+    chart.plotly_chart(figure_or_data=fig)
