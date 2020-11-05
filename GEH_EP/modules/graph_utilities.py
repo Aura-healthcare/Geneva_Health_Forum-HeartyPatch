@@ -42,6 +42,7 @@ class generate_graph_data_handler():
         temp_list[:len(self.y_axis)] = self.y_axis
         self.y_axis = temp_list
 
+
         return self.x_axis, self.y_axis
 
     def reinitialize(self):

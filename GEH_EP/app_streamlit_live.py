@@ -1,14 +1,16 @@
 import streamlit as st
 import pandas as pd
+import socket
 # import re
-# import time
+import time
 # from datetime import timedelta
 # import seaborn as sns
 # import plotly.express as px
 # import numpy as np
 from modules.graph_utilities import (generate_graph_data_handler,
                                      graph_generation)
-from modules.tcp_script import start_stream
+#from modules.tcp_script import start_stream, connect_hearty_patch
+from test_streaming import HeartyPatch_TCP_Parser, connect_hearty_patch, get_heartypatch_data
 
 
 # Initializing time window
@@ -78,14 +80,51 @@ if st.sidebar.button(label='Reinitialize'):
     x, y = graph_data_handler.x_axis, graph_data_handler.y_axis
     graph_generation(chart, x, y, slider_y_axis, data_freq)
 
+max_packets= 10000
+max_seconds = 5 # default recording duration is 10min
+hp_host = 'heartypatch.local'
+df_ecg = pd.DataFrame(columns=['ECG'], data=[0])
+
+hp = HeartyPatch_TCP_Parser()
+connexion = connect_hearty_patch()
+socket_test = connexion.sock
+print('Ready for loop')
+
 if st.sidebar.button(label='Start stream'):
 
     stop_value = 0
     if st.sidebar.button(label='Stop stream'):
         stop_value = 1
 
+    #hp_host = 'heartypatch.local'
+    #hp_port = 4567
+
+
+    # Open connexion
+    #connexion = connect_hearty_patch()
+    #print('st connected')
+
+
     while stop_value == 0:
 
+        for i in range(10):
         # ITERATION
 
-        start_stream()
+            print('starting loop')
+
+            temp_data = get_heartypatch_data(max_packets=max_packets, max_seconds=max_seconds, hp_host=hp_host)
+            
+            print(temp_data)
+
+            
+    #        stream_df = start_stream(graph_data_handler)
+
+            x, y = graph_data_handler.update_graph_data(
+                df_ecg=temp_data,
+                time_window=time_window)
+            graph_generation(chart, x, y, slider_y_axis, 1/data_freq)
+
+        print('end of loop {}'.format(i))
+
+
+        break
