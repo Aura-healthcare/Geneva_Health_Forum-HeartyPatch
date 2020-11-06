@@ -21,6 +21,9 @@ class generate_graph_data_handler():
         temp_list[:len(self.y_axis)] = self.y_axis
         self.y_axis = temp_list
 
+
+        self.last_second_displayed = 0
+
     def update_graph_data(self, df_ecg: pd.DataFrame, time_window: int) \
             -> [np.array, np.array]:
 
@@ -46,38 +49,45 @@ class generate_graph_data_handler():
 
         return self.x_axis, self.y_axis
 
-    def update_graph_data_stream(self, df_ecg: pd.DataFrame, stream_count: int) \
+    def update_graph_data_stream(self, df_ecg: pd.DataFrame, time_window: int) \
             -> [np.array, np.array]:
 
         self.df_graph_data_stream = df_ecg
-        self.stream_count = stream_count
+        self.time_window = time_window
 
-        # Update of y_axis and padding
-        # self.y_axis = self.df_graph_data['ECG'].\
-        #    loc[self.starting_frame:self.ending_frame].values
+        self.last_second_displayed = self.df_graph_data_stream['duration'].iloc[-1]
+        ending_frame = self.last_second_displayed - (self.last_second_displayed % self.time_window) +  self.time_window
 
-        temp_list = np.zeros(self.time_window + 1)
-        for i in range(self.time_window + 1):
-            temp_list[i] = df_ecg['ECG'].loc[int(round(stream_count / self.time_window, 0))]
-        self.df_graph_data_stream = self.df_graph_data_stream.append({'ECG': temp_list}, ignore_index=True)
+        print('last_second_displayed' + str(self.last_second_displayed))
+        print('ending frame' + str(ending_frame))
+        self.y_axis = self.df_graph_data_stream['ECG'][
+            (self.df_graph_data_stream['duration'] < ending_frame) & (
+                self.df_graph_data_stream['duration'] >= (ending_frame - self.time_window))
+            ]
+
+
+        self.x_axis = self.df_graph_data_stream['duration'][
+            (self.df_graph_data_stream['duration'] < ending_frame) & (
+                self.df_graph_data_stream['duration'] >= (ending_frame - self.time_window))
+            ]
+       # self.y_axis = self.df_graph_data_stream['ECG'][self.df_graph_data_stream['duration'] > (self.last_second_displayed - seconds_to_display)].values
+        # self.x_axis = self.df_graph_data_stream['duration'][self.df_graph_data_stream['duration'] > (self.last_second_displayed - seconds_to_display)].values
+
+        if (ending_frame - (self.last_second_displayed)%self.time_window) > 0:
+            if (self.last_second_displayed % 1) < 0.50:
+                round_last_second_display = int(round(self.last_second_displayed, 0)) + 1
+            else:
+                round_last_second_display = int(round(self.last_second_displayed, 0))
+
+            print('round_last_second_display' + str(round_last_second_display))
+
+            added_duration = np.arange(round_last_second_display, ending_frame + 1, 1)
+            added_ecg  = np.zeros(len(added_duration)) + self.df_graph_data_stream['ECG'].iloc[-1]
+
+            print(added_duration)
         
-        # If data displayed in graph reach the right
-        if (self.df_graph_data_stream.index[-1:][0] - (
-                                                self.starting_frame)) >= (
-                                                self.time_window):
-            self.starting_frame += self.time_window
-            self.ending_frame = self.starting_frame + self.time_window
-            self.x_axis = np.arange(self.starting_frame,
-                                    self.starting_frame + self.time_window+1)
-
-        # Update of y_axis and padding
-            print(self.x_axis)
-            self.y_axis = self.df_graph_data_stream['ECG'].\
-            loc[self.starting_frame:self.ending_frame].values
-            #temp_list = np.zeros(self.time_window + 1)
-            print(self.y_axis)
-            #temp_list[:len(self.y_axis)] = self.y_axis
-            #self.y_axis = temp_list
+            self.x_axis = [*self.x_axis, *added_duration]
+            self.y_axis = [*self.y_axis, *added_ecg]
 
         return self.x_axis, self.y_axis
 

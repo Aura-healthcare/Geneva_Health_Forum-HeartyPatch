@@ -81,6 +81,8 @@ class HeartyPatch_TCP_Parser:
         self.df = pd.DataFrame(columns=['ECG'])
         self.df_ecg = pd.DataFrame(columns=['ECG'], data=[0])
         self.time_window = 5
+
+        self.df['duration'] = 0
         # Remove?
         pass
 
@@ -179,11 +181,16 @@ class HeartyPatch_TCP_Parser:
                 assert ptr == 16
                 assert pkt_len == (16 + 8 * 4)
 
+                # to modify
+                retrieved_data = 1
+
                 # Process Sequence ID
                 while ptr < pkt_len:
                     ecg = struct.unpack('<i', payload[ptr:ptr+4])[0] / 1000.0
                     self.all_ecg.append(ecg)
-                    self.df = self.df.append({'ECG': ecg}, ignore_index=True)
+                    retrieved_data += 1
+                    # Sort outside of loop for better efficency
+                    # self.df = self.df.append({'ECG': ecg)}, ignore_index=True)
                     # graph_data_handler.update_graph_data(self.df,
                     # self.time_window)
                     ptr += self.ces_pkt_ecg_bytes
@@ -265,6 +272,8 @@ def get_heartypatch_data(
 
 #    timer = datetime.datetime.today() + (
 #        datetime.timedelta(seconds=max_seconds))
+    
+    retrieved_data_before = len(hp.all_ecg)
 
     while (timer - (datetime.datetime.today())) >= (
             datetime.timedelta(seconds=0)) and (
@@ -274,6 +283,8 @@ def get_heartypatch_data(
         txt = soc.recv(16*1024)
         hp.add_data(txt)
         hp.process_packets()
+
+
 
         # Insert here Data Link with streamlit
         i += 1
@@ -289,9 +300,34 @@ def get_heartypatch_data(
             pkt_last = pkt_last + 1000
             sys.stdout.write(str(hp.packet_count//1000))
             sys.stdout.flush()
-    print('Data Retrieved')
-    print(i)
 
+    # hp.df['time_value'] = hp.df.index / i
+
+    retrieved_data_length = len(hp.all_ecg)  - retrieved_data_before
+    print('retrieved_data_length '+str(retrieved_data_length))
+    data = hp.all_ecg[-retrieved_data_length:] 
+    print('len data '+str(len(data)))
+
+    try:
+        start_time_index = hp.df['duration'].iloc[-1]
+    except:
+        start_time_index = 0
+    
+    print('start_time_index '+str(start_time_index))
+
+
+    duration = start_time_index +  np.arange(0, len(data) , 1)/len(data)
+
+    print('len duration '+str(len(duration)))
+    #print('len(start_time_index + np.arange(start_time_index, len(data), 1)/len(data)')
+    
+    temp_df = pd.DataFrame({'ECG': data,
+                            'duration': duration
+#                            'duration': np.arange(start_time_index,
+#                                                  start_time_index + 1,
+#                                                  (1/len(hp.all_ecg[-retrieved_data:]))
+                            })
+    hp.df = pd.concat([hp.df, temp_df], ignore_index=True)
     return hp.df, i
 
 
