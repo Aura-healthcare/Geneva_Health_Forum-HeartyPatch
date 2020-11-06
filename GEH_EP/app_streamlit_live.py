@@ -3,14 +3,14 @@ import pandas as pd
 import socket
 # import re
 import time
-# from datetime import timedelta
+import datetime
 # import seaborn as sns
 # import plotly.express as px
 # import numpy as np
 from modules.graph_utilities import (generate_graph_data_handler,
                                      graph_generation)
 #from modules.tcp_script import start_stream, connect_hearty_patch
-from test_streaming import HeartyPatch_TCP_Parser, connect_hearty_patch, get_heartypatch_data
+from modules.tcp_script import HeartyPatch_TCP_Parser, connect_hearty_patch, get_heartypatch_data
 
 
 # Initializing time window
@@ -22,20 +22,20 @@ time_window_slider = st.sidebar.slider(
     min_value=0,
     max_value=10,
     step=1,
-    value=5)
+    value=10)
 
 data_frequ_slider = st.sidebar.slider(
     label='Data Frequency (Hz):',
     min_value=0,
     max_value=100,
     step=5,
-    value=50)
+    value=2)
 
-data_freq = data_frequ_slider
-
+data_freq = 1/data_frequ_slider
 # To CLEAN
-time_window = round(data_frequ_slider)
+time_window = round(time_window_slider / data_freq * 60)
 st.sidebar.write('time_window:', str(time_window) + ' values')
+st.sidebar.write('data_freq:', str(1/data_freq))
 
 # Loading graph data handler
 
@@ -84,28 +84,45 @@ if st.sidebar.button(label='Reinitialize'):
 # Parameters
 
 max_packets= 10000
-max_seconds = 1/data_freq # default recording duration is 10min
+max_seconds = data_freq
+
+#max_seconds = 1 # default recording duration is 10min
 hp_host = 'heartypatch.local'
 df_ecg = pd.DataFrame(columns=['ECG'], data=[0])
 
 hp = HeartyPatch_TCP_Parser()
 connexion = connect_hearty_patch()
-socket_test = connexion.sock
-
+timer_offset = data_freq
 print('Ready for stream !')
 
 if st.sidebar.button(label='Start stream'):
+
+    socket_test = connexion.sock
 
     stop_value = 0
     if st.sidebar.button(label='Stop stream'):
         stop_value = 1
 
+    timer = datetime.datetime.today() + (
+    datetime.timedelta(seconds=timer_offset))
+
     while stop_value == 0:
 
-        df_stream = get_heartypatch_data(max_packets=max_packets, max_seconds=max_seconds, hp_host=hp_host)
-        x, y = graph_data_handler.update_graph_data(
+        while (timer - (
+            datetime.datetime.today())) >= (
+            datetime.timedelta(seconds=0)):
+            df_stream, stream_count = get_heartypatch_data(max_packets=max_packets, max_seconds=max_seconds, hp_host=hp_host, timer=timer)
+            stream_freq = 1 / (stream_count * data_freq)
+        print('Sample retrieved : {}'.format(stream_count))
+        print(df_stream)
+        x, y = graph_data_handler.update_graph_data_stream(
             df_ecg=df_stream,
-            time_window=time_window)
-        graph_generation(chart, x, y, slider_y_axis, 1/data_freq)
+            stream_count=stream_count)
+        #graph_generation(chart, x, y, slider_y_axis, data_freq)
+        graph_generation(chart, x, y, slider_y_axis, data_freq)
+
+        timer += datetime.timedelta(seconds=timer_offset)
+
+    socket_test.close()
 
         # break

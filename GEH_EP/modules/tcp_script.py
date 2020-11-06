@@ -21,7 +21,7 @@ import pandas as pd
 # import matplotlib.pyplot as plt
 # import scipy.signal as signal
 import time
-# from datetime import datetime
+import datetime
 from modules.graph_utilities import generate_graph_data_handler
 
 
@@ -195,7 +195,7 @@ class HeartyPatch_TCP_Parser:
 
 
 hp = HeartyPatch_TCP_Parser()
-tStart = None
+timer = None
 
 
 class connect_hearty_patch:
@@ -221,6 +221,9 @@ class connect_hearty_patch:
             self.sock = socket.create_connection((self.hp_host, self.hp_port))
             print('Socket created after attempt\n')
 
+        def close_socket(self):
+            self.sock.close()
+
 
 connexion = connect_hearty_patch()
 socket_test = connexion.sock
@@ -229,7 +232,9 @@ socket_test = connexion.sock
 def get_heartypatch_data(
         max_packets=10000,
         hp_host='192.168.0.106',
-        max_seconds=5):
+        max_seconds=5,
+        timer = datetime.datetime.today() + (
+        datetime.timedelta(seconds=max_seconds))):
 
     global soc
     global hp
@@ -258,11 +263,18 @@ def get_heartypatch_data(
     pkt_last = 0
     txt = soc.recv(16*1024)  # discard any initial results
 
-    tStart = time.time()
-    while max_packets == -1 or hp.packet_count < max_packets:
+#    timer = datetime.datetime.today() + (
+#        datetime.timedelta(seconds=max_seconds))
+
+    while (timer - (datetime.datetime.today())) >= (
+            datetime.timedelta(seconds=0)) and (
+            max_packets == -1 or hp.packet_count < max_packets):
+
+    # while  timer - datetime.datetime.today()  >=0 and (max_packets == -1 or hp.packet_count < max_packets):
         txt = soc.recv(16*1024)
         hp.add_data(txt)
         hp.process_packets()
+
         # Insert here Data Link with streamlit
         i += 1
 
@@ -275,20 +287,18 @@ def get_heartypatch_data(
 
         if hp.packet_count - pkt_last >= 1000:
             pkt_last = pkt_last + 1000
-            sys.stdout.write(hp.packet_count//1000)
+            sys.stdout.write(str(hp.packet_count//1000))
             sys.stdout.flush()
+    print('Data Retrieved')
+    print(i)
 
-        if time.time() - tStart > max_seconds:
-            break
-
-    print(hp.df)
-    return hp.df
+    return hp.df, i
 
 
 def finish():
     # global soc
     # global hp
-    # global tStart
+    # global timer
     # global fname
 
     if soc is not None:

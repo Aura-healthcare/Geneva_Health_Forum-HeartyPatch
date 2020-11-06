@@ -19,7 +19,7 @@ import datetime
 
 @st.cache(allow_output_mutation=True, suppress_st_warning=True)
 def load_example_ecg_data():
-    df_ecg = pd.read_csv('data/simulation/df_simualation.csv')
+    df_ecg = pd.read_csv('data/simulation/df_simulation.csv')
     return df_ecg
 
 
@@ -31,7 +31,7 @@ df_ecg_simulation = load_example_ecg_data()
 if checkbox_simulation is True:
     df_ecg = df_ecg_simulation
     simulation_step = st.sidebar.slider(
-        label='Select data simulation value:',
+        label='Select batch size for actualisation:',
         min_value=0,
         max_value=30,
         step=1,
@@ -44,10 +44,10 @@ else:
     pass
     # Add realtime use
 
-data_freq = sequence_duraration/n_data
-st.sidebar.write('Data freq :', str(round(data_freq*1000, 2)) + ' ms')
+data_freq = n_data/sequence_duraration
+st.sidebar.write('Data period :', str(round(1/data_freq*1000, 2)) + ' ms')
 st.sidebar.write('Graph actualisation freq :',
-                 str(round(simulation_step * data_freq*1000, 2)) + ' ms')
+                 str(round(simulation_step * 1000 / data_freq, 2)) + ' ms')
 
 # Initializing time window
 
@@ -61,8 +61,8 @@ time_window_slider = st.sidebar.slider(
     value=5)
 
 
-time_window = round(time_window_slider / data_freq)
-timer_offset = simulation_step * data_freq
+time_window = round(time_window_slider * data_freq)
+timer_offset = simulation_step / data_freq
 
 # st.write('simulation_step', simulation_step)
 # st.write('Data period', round(1/data_freq,3))
@@ -118,7 +118,7 @@ slider_y_axis = st.sidebar.slider(
 st.title(body='ECG Visualization')
 
 chart = st.empty()
-graph_generation(chart, x, y, slider_y_axis, data_freq)
+graph_generation(chart, x, y, slider_y_axis, 1/data_freq)
 
 
 st.sidebar.subheader(body='Actions:')
@@ -128,7 +128,7 @@ if st.sidebar.button(label='Reinitialize'):
     graph_data_handler.reinitialize()
     simulation.reinitialize()
     x, y = graph_data_handler.x_axis, graph_data_handler.y_axis
-    graph_generation(chart, x, y, slider_y_axis, data_freq)
+    graph_generation(chart, x, y, slider_y_axis, 1/data_freq)
 
 if st.sidebar.button(label='Start'):
 
@@ -152,4 +152,4 @@ if st.sidebar.button(label='Start'):
             pass
 
         timer += datetime.timedelta(seconds=timer_offset)
-        graph_generation(chart, x, y, slider_y_axis, data_freq)
+        graph_generation(chart, x, y, slider_y_axis, 1/data_freq)
