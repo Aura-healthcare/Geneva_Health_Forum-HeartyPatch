@@ -262,13 +262,13 @@ def finish():
     n = text_file.write(str(hp.data))
     text_file.close()
 
-    hp.df.to_csv('df.csv', index=False)
+    hp.df.to_csv('df_now.csv', index=False)
 
 
 if __name__== "__main__":
 
     max_packets= 10000
-    max_seconds = 25 # default recording duration is 10min
+    max_seconds = 5 # default recording duration is 10min
     hp_host = 'heartypatch.local'
 
     get_heartypatch_data(max_packets=max_packets, max_seconds=max_seconds, hp_host=hp_host)

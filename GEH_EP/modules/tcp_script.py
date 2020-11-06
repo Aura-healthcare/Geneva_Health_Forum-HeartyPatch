@@ -301,31 +301,18 @@ def get_heartypatch_data(
             sys.stdout.write(str(hp.packet_count//1000))
             sys.stdout.flush()
 
-    # hp.df['time_value'] = hp.df.index / i
-
     retrieved_data_length = len(hp.all_ecg)  - retrieved_data_before
-    print('retrieved_data_length '+str(retrieved_data_length))
     data = hp.all_ecg[-retrieved_data_length:] 
-    print('len data '+str(len(data)))
 
     try:
         start_time_index = hp.df['duration'].iloc[-1]
     except:
         start_time_index = 0
-    
-    print('start_time_index '+str(start_time_index))
-
 
     duration = start_time_index +  np.arange(0, len(data) , 1)/len(data)
-
-    print('len duration '+str(len(duration)))
-    #print('len(start_time_index + np.arange(start_time_index, len(data), 1)/len(data)')
-    
+   
     temp_df = pd.DataFrame({'ECG': data,
                             'duration': duration
-#                            'duration': np.arange(start_time_index,
-#                                                  start_time_index + 1,
-#                                                  (1/len(hp.all_ecg[-retrieved_data:]))
                             })
     hp.df = pd.concat([hp.df, temp_df], ignore_index=True)
     return hp.df, i
@@ -359,6 +346,8 @@ if __name__== "__main__":
     hp_host = 'heartypatch.local'
     df_ecg = pd.DataFrame(columns=['ECG'], data=[0])
     time_window = 5
+
+    hp = HeartyPatch_TCP_Parser()
 
     get_heartypatch_data(max_packets=max_packets,
                          max_seconds=max_seconds,

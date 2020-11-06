@@ -58,8 +58,6 @@ class generate_graph_data_handler():
         self.last_second_displayed = self.df_graph_data_stream['duration'].iloc[-1]
         ending_frame = self.last_second_displayed - (self.last_second_displayed % self.time_window) +  self.time_window
 
-        print('last_second_displayed' + str(self.last_second_displayed))
-        print('ending frame' + str(ending_frame))
         self.y_axis = self.df_graph_data_stream['ECG'][
             (self.df_graph_data_stream['duration'] < ending_frame) & (
                 self.df_graph_data_stream['duration'] >= (ending_frame - self.time_window))
@@ -79,13 +77,9 @@ class generate_graph_data_handler():
             else:
                 round_last_second_display = int(round(self.last_second_displayed, 0))
 
-            print('round_last_second_display' + str(round_last_second_display))
-
             added_duration = np.arange(round_last_second_display, ending_frame + 1, 1)
             added_ecg  = np.zeros(len(added_duration)) + self.df_graph_data_stream['ECG'].iloc[-1]
 
-            print(added_duration)
-        
             self.x_axis = [*self.x_axis, *added_duration]
             self.y_axis = [*self.y_axis, *added_ecg]
 
@@ -100,7 +94,8 @@ class generate_graph_data_handler():
 
 
 def graph_generation(chart, x, y, slider_y_axis, data_freq):
-    fig = px.line(x=x*data_freq,
+    fig = px.line(x=[i*data_freq for i in x],
+                  # x=x*data_freq,
                   y=y,
                   title='Live EEG',
                   range_y=slider_y_axis,
