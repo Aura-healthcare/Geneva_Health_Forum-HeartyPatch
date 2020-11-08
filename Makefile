@@ -6,3 +6,9 @@ streamlit_live:
 
 clean_results:
 	rm  data/results/*
+
+streamlit_server:
+	python GEH_EP/modules/sockets_utilities.py --server
+
+streamlit_client:
+	python GEH_EP/modules/sockets_utilities.py --client

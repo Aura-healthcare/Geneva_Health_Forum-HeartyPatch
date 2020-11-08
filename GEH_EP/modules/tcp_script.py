@@ -13,13 +13,13 @@ import socket
 # from pprint import pprint
 # import os
 import sys
-# import signal as sys_signal
+import signal as sys_signal
 import struct
 
 import numpy as np
 import pandas as pd
 # import matplotlib.pyplot as plt
-# import scipy.signal as signal
+import scipy.signal as signal
 import time
 import datetime
 from graph_utilities import generate_graph_data_handler
@@ -393,6 +393,6 @@ if __name__== "__main__":
     get_heartypatch_data(max_packets=max_packets,
                         max_seconds=max_seconds,
                         hp_host=hp_host)
-    finish(show_plot)
+    finish()
 
     print('Properly Run!')
