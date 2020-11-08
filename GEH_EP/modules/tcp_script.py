@@ -22,14 +22,14 @@ import pandas as pd
 # import scipy.signal as signal
 import time
 import datetime
-from modules.graph_utilities import generate_graph_data_handler
+from graph_utilities import generate_graph_data_handler
 
 
 max_packets = 10000
 max_seconds = 5  # default recording duration is 10min
-hp_host = 'heartypatch.local'
+# hp_host = 'heartypatch.local'
 hp_port = 4567
-fname = 'log.csv'
+
 df_ecg = pd.DataFrame(columns=['ECG'], data=[0])
 time_window = 5
 graph_data_handler = generate_graph_data_handler(df_ecg=df_ecg,
@@ -238,7 +238,7 @@ socket_test = connexion.sock
 
 def get_heartypatch_data(
         max_packets=10000,
-        hp_host='192.168.0.106',
+        hp_host='heartypatch.local',
         max_seconds=5,
         timer = datetime.datetime.today() + (
         datetime.timedelta(seconds=max_seconds))):
@@ -338,20 +338,61 @@ def finish():
 
     hp.df.to_csv('df.csv', index=False)
 
+def signal_handler(signal, frame):
+    global soc
+    print('Interrupted by Ctrl+C!')
+#    finish()
+    sys.exit(0)
+
 
 if __name__== "__main__":
 
     max_packets = 10000
     max_seconds = 5  # default recording duration is 10min
+    fname = 'log.csv'
     hp_host = 'heartypatch.local'
+    #hp_host = '192.168.137.148'
+
     df_ecg = pd.DataFrame(columns=['ECG'], data=[0])
     time_window = 5
 
+    i = 1
+    while i < len(sys.argv):
+        if sys.argv[i] == '-f' and i < len(sys.argv)-1:
+            fname = sys.argv[i+1]
+            i += 2
+        elif sys.argv[i] == '-s' and i < len(sys.argv)-1:
+            max_packets = int(sys.argv[i+1])
+            max_seconds = -1
+            i += 2
+        elif sys.argv[i] == '-m' and i < len(sys.argv)-1:
+            max_seconds = int(sys.argv[i+1])*60
+            max_packets = -1
+            i += 2
+        elif sys.argv[i] == '-i' and i < len(sys.argv)-1:
+            try:
+                foo = int(sys.argv[i+1])
+                hp_host = '192.168.43.'+sys.argv[i+1]
+            except Exception:
+                hp_host = sys.argv[i + 1]
+            i += 2
+        elif sys.argv[i] in '-p':
+            show_plot = True
+            i += 1
+        elif sys.argv[i] in ['-h', '--help']:
+            help()
+        else:
+            print('Unknown argument' + str(sys.argv[i]))
+            help()
+
+
     hp = HeartyPatch_TCP_Parser()
 
+    sys_signal.signal(sys_signal.SIGINT, signal_handler)
+    get_heartypatch_data(max_packets=max_packets, max_seconds=max_seconds, hp_host=hp_host)
     get_heartypatch_data(max_packets=max_packets,
-                         max_seconds=max_seconds,
-                         hp_host=hp_host)
+                        max_seconds=max_seconds,
+                        hp_host=hp_host)
+    finish(show_plot)
 
-    finish()
     print('Properly Run!')
