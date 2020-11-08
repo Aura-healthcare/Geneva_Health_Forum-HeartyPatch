@@ -23,6 +23,7 @@ import scipy.signal as signal
 import time
 import datetime
 from graph_utilities import generate_graph_data_handler
+from modules.sockets_utilities import tcp_server_streamlit
 
 
 max_packets = 10000
@@ -234,6 +235,7 @@ class connect_hearty_patch:
 
 connexion = connect_hearty_patch()
 socket_test = connexion.sock
+streamlit_connexion = tcp_client_streamlit
 
 
 def get_heartypatch_data(
@@ -283,7 +285,7 @@ def get_heartypatch_data(
         txt = soc.recv(16*1024)
         hp.add_data(txt)
         hp.process_packets()
-
+        tcp_client_st.send_to_st_client(data_to_send=hp.all_ts[-1:])
 
 
         # Insert here Data Link with streamlit
@@ -315,7 +317,6 @@ def get_heartypatch_data(
                             'duration': duration
                             })
     hp.df = pd.concat([hp.df, temp_df], ignore_index=True)
-    return hp.df, i
 
 
 def finish():
@@ -387,9 +388,9 @@ if __name__== "__main__":
 
 
     hp = HeartyPatch_TCP_Parser()
+    tcp_client_st = tcp_client_streamlit()
 
     sys_signal.signal(sys_signal.SIGINT, signal_handler)
-    get_heartypatch_data(max_packets=max_packets, max_seconds=max_seconds, hp_host=hp_host)
     get_heartypatch_data(max_packets=max_packets,
                         max_seconds=max_seconds,
                         hp_host=hp_host)

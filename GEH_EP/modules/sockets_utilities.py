@@ -2,58 +2,81 @@ import socket
 import sys
 
 
-def tcp_client_streamlit(host='localhost', port=12800):
+# def tcp_client_streamlit(host='localhost', port=12800):
+# 
+#     st_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#     st_socket.connect((host, port))
+#     
+#     sys.stdout.write('Connexion established\n')
+#     sys.stdout.flush()
+# 
+#     data_to_send = b""
+# 
+#     while True:
+#         data_to_send = input("> ")
+#         data_to_send = data_to_send.encode()
+#         # On envoie le message
+#         st_socket.send(data_to_send)
+#         #data_received = connexion_avec_serveur.recv(1024)
+#         #print(data_received.decode())
+# 
+#     print("Closing socket")
+#     st_socket.close()
+# 
 
-    st_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    st_socket.connect((host, port))
-    
-    sys.stdout.write('Connexion established\n')
-    sys.stdout.flush()
+class tcp_client_streamlit:
 
-    data_to_send = b""
+    def __init__(self, host='localhost', port=12800):
 
-    while True:
-        data_to_send = input("> ")
+        self.st_socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.st_socket_client.connect((host, port))
+
+        sys.stdout.write('Connexion established\n')
+        sys.stdout.flush()
+
+    def send_to_st_client(self, data_to_send=''):
+        print(data_to_send)
         data_to_send = data_to_send.encode()
-        # On envoie le message
-        st_socket.send(data_to_send)
-        #data_received = connexion_avec_serveur.recv(1024)
-        #print(data_received.decode())
+        print(data_to_send)
+        print(data_to_send)
+        self.st_socket_client.send(data_to_send)
 
-    print("Closing socket")
-    st_socket.close()
+    def close(self):
+        self.st_socket_client.close()
 
 
-def tcp_server_streamlit(host='localhost', port=12800):
+class tcp_server_streamlit:
 
-    st_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    st_socket.bind((host, port))
-    st_socket.listen(10)
+    def __init__(self, host='localhost', port=12800):
 
-    st_connexion, infos = st_socket.accept()
+        self.st_socket_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.st_socket_server.bind((host, port))
+        self.st_socket_server.listen(10)
 
-    sys.stdout.write('Connexion established\n')
-    sys.stdout.flush()
+        self.st_connexion, infos = self.st_socket_server.accept()
 
-    data_received = b""
-    while True:
-        data_received = st_connexion.recv(1024)
-        data_decoded = data_received.decode()
-        print(data_decoded)
-        try:
-            print(data_decoded.split(','))
-        except:
-            pass
+        sys.stdout.write('Connexion established\n')
+        sys.stdout.flush()
 
-    print("Closing socket")
-    st_socket.close()
+        self.data_received = self.st_connexion.recv(1024)
+
+    def receive_and_process(self):
+        while True:
+            data_decoded = self.data_received.decode()
+            print(data_decoded)
+            self.data_received = self.st_connexion.recv(1024)
+
+    def close(self):
+        self.st_socket_server.close()
 
 
 if __name__ == "__main__":
 
     if sys.argv[1] == '--server':
-        tcp_server_streamlit()
+        tcp_server_st = tcp_server_streamlit()
+        tcp_server_st.receive_and_process()
     elif sys.argv[1] == '--client':
-        tcp_client_streamlit()
+        tcp_client_st = tcp_client_streamlit()
+        # tcp_client_st.st_socket_client.send(b'test')
     else:
         print("Valid arguments are '--server' and '--client'")
