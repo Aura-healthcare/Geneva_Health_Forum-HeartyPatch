@@ -223,8 +223,9 @@ def get_heartypatch_data(
 
 def finish():
 
+    print('sending close')
     tcp_client_st.send_to_st_client(data_to_send=b'close')
-
+    print('close sent')
     if connexion.sock is not None:
         connexion.sock.close()
 
@@ -270,14 +271,14 @@ if __name__ == "__main__":
         elif sys.argv[i] == '-i' and i < len(sys.argv)-1:
             hp_host = sys.argv[i + 1]
             i += 2
-        elif sys.argv[i] in '-p':
-            show_plot = True
-            i += 1
+        elif sys.argv[i] == '-p':
+            hp_port = sys.argv[i + 1]
+            i += 2
         elif sys.argv[i] in ['-h', '--help']:
             help()
         else:
             print('Unknown argument' + str(sys.argv[i]))
-            help()
+            break
 
     # Class initialisation and start of streaming
     connexion = connect_hearty_patch()

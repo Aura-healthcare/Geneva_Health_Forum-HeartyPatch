@@ -94,8 +94,8 @@ class generate_graph_data_handler():
 
 
 def graph_generation(chart, x, y, slider_y_axis, data_freq):
-    fig = px.line(x=[i*data_freq for i in x],
-                  # x=x*data_freq,
+    fig = px.line(#x=[i*data_freq for i in x],
+                  x=x*data_freq,
                   y=y,
                   title='Live EEG',
                   range_y=slider_y_axis,

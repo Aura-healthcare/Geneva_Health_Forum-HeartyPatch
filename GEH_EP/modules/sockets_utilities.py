@@ -1,5 +1,7 @@
 import socket
 import sys
+from threading import Thread
+import pandas as pd
 
 
 class tcp_client_streamlit:
@@ -19,10 +21,10 @@ class tcp_client_streamlit:
         self.st_socket_client.send(data_to_send)
 
 
-class tcp_server_streamlit:
+class tcp_server_streamlit(Thread):
 
     def __init__(self, host='localhost', port=12801):
-
+        Thread.__init__(self)
         self.st_socket_server = socket.socket(socket.AF_INET,
                                               socket.SOCK_STREAM)
         self.st_socket_server.bind((host, port))
@@ -34,16 +36,32 @@ class tcp_server_streamlit:
         sys.stdout.flush()
 
         self.data_received = self.st_connexion.recv(1024)
+        # self.data = []  
+        self.df = pd.DataFrame(columns=['timestamp', 'ECG'])
+
+# Delete?
 
     def receive_and_process(self):
 
         while self.data_received != b'close':
             data_decoded = self.data_received.decode()
-            print(data_decoded)
+
+            # Processing the data received
+            # self.data.append(data_decoded)
+
+            temp_list = list(map(float, data_decoded.split(',')))
+            for i in range(1, len(temp_list)):
+                self.df = self.df.append({'timestamp': temp_list[0],
+                                          'ECG': temp_list[i]},
+                                         ignore_index=True)
+
             self.data_received = self.st_connexion.recv(1024)
         self.st_connexion.close()
         sys.stdout.write('Connexion closed\n')
         sys.stdout.flush()
+
+    def run(self):
+        self.receive_and_process()
 
 
 if __name__ == "__main__":
