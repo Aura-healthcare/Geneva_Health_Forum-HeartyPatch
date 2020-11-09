@@ -26,9 +26,10 @@ class tcp_server_streamlit(Thread):
     def __init__(self, host='localhost', port=12801):
         Thread.__init__(self)
         self.st_socket_server = socket.socket(socket.AF_INET,
-                                              socket.SOCK_STREAM)
+                                              socket.SOCK_STREAM,
+                                              )
         self.st_socket_server.bind((host, port))
-        self.st_socket_server.listen(10)
+        self.st_socket_server.listen(5)
 
         self.st_connexion, st_address = self.st_socket_server.accept()
 
@@ -36,28 +37,34 @@ class tcp_server_streamlit(Thread):
         sys.stdout.flush()
 
         self.data_received = self.st_connexion.recv(1024)
-        # self.data = []  
         self.df = pd.DataFrame(columns=['timestamp', 'ECG'])
-
-# Delete?
 
     def receive_and_process(self):
 
         while self.data_received != b'close':
+
             data_decoded = self.data_received.decode()
 
             # Processing the data received
-            # self.data.append(data_decoded)
-
-            temp_list = list(map(float, data_decoded.split(',')))
-            for i in range(1, len(temp_list)):
-                self.df = self.df.append({'timestamp': temp_list[0],
-                                          'ECG': temp_list[i]},
-                                         ignore_index=True)
+            # TO DO : modify timestamp for duration
+            try:
+                temp_list = list(map(float, data_decoded.split(',')))
+                for i in range(1, len(temp_list)):
+                    self.df = self.df.append({
+                        'timestamp': temp_list[0]+((i-1)/128),
+                        'ECG': temp_list[i]},
+                                            ignore_index=True)
+            except:
+                print('bad data received')
 
             self.data_received = self.st_connexion.recv(1024)
-        self.st_connexion.close()
-        sys.stdout.write('Connexion closed\n')
+
+        try:
+            self.st_connexion.close()
+            sys.stdout.write('Connexion closed\n')
+        except:
+            sys.stdout.write('Connexion already closed\n')
+
         sys.stdout.flush()
 
     def run(self):

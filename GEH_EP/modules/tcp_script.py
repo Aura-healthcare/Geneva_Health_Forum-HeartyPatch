@@ -223,9 +223,8 @@ def get_heartypatch_data(
 
 def finish():
 
-    print('sending close')
     tcp_client_st.send_to_st_client(data_to_send=b'close')
-    print('close sent')
+
     if connexion.sock is not None:
         connexion.sock.close()
 

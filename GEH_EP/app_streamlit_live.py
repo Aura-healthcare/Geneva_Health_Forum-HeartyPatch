@@ -1,36 +1,38 @@
 import streamlit as st
 import pandas as pd
 from modules.graph_utilities import (generate_graph_data_handler,
-                                     graph_generation)
+                                     graph_generation,
+                                     data_delay)
 from modules.sockets_utilities import tcp_server_streamlit
-from threading import Thread
-import time
-import plotly.express as px
-
 
 # Initializing time window
+stop_value = 0
 
 st.sidebar.subheader('Parameters')
 
-time_window_slider = st.sidebar.slider(
+time_window = st.sidebar.slider(
     label='Seconds to display:',
-    min_value=0,
-    max_value=10,
+    min_value=1,
+    max_value=50,
     step=1,
-    value=5)
+    value=16)
 
-data_frequ_slider = st.sidebar.slider(
-    label='Data Frequency (Hz):',
-    min_value=0,
+data_freq = st.sidebar.slider(
+    label='Graph actualisation frequency (Hz):',
+    min_value=1,
     max_value=100,
-    step=5,
-    value=50)
+    step=2,
+    value=10)
 
-data_freq = data_frequ_slider
+y_axis = st.sidebar.slider(
+    label='y-axis modifier:',
+    min_value=-1500,
+    max_value=0,
+    step=100,
+    value=(-1200, -600))
 
-# To CLEAN
-time_window = round(data_frequ_slider)
-st.sidebar.write('time_window:', str(time_window) + ' values')
+data_freq = 1/data_freq  # Slider is clearer with the period
+
 
 # Loading graph data handler
 
@@ -44,75 +46,47 @@ def load_graph_data_handler(df_ecg=df_ecg, time_window=time_window):
     return graph_data_handler
 
 
-# Loading data simulation function
-
-
 graph_data_handler = load_graph_data_handler(df_ecg=df_ecg,
                                              time_window=time_window)
 
-x, y = graph_data_handler.x_axis, graph_data_handler.y_axis
 
-slider_y_axis = st.sidebar.slider(
-    label='y-axis modifier:',
-    min_value=-1500,
-    max_value=0,
-    step=100,
-    value=(-1200, -600)
-)
-
-# MAIN time_window
+# MAIN WINDOW
 st.title(body='ECG Visualization')
+
+chart = st.empty()
+x, y = graph_data_handler.x_axis, graph_data_handler.y_axis
+graph_generation(chart, x, y, y_axis, 1)
+
+# to do: improve warning
+st.status = st.sidebar.markdown(
+    body='<span style="color: green"> Ready for stream! </span>',
+    unsafe_allow_html=True)
+print('Ready for stream !')
 
 if st.sidebar.button(label='Start'):
 
-    chart = st.empty()
-    graph_generation(chart, x, y, slider_y_axis, data_freq)
+    # Initializing threads
+    print('Waiting for HP connexion...')
 
+    thr_tcp_server_st = tcp_server_streamlit()
+    thr_data_disp = data_delay()
 
-    class data_display(Thread):
+    thr_tcp_server_st.start()
+    thr_data_disp.start()
 
-        def __init__(self):
-            Thread.__init__(self)
-            self.graph_data = pd.DataFrame()
+    if st.sidebar.button(label='Stop'):
+        stop_value = 1
+        try:
+            thr_tcp_server_st.st_connexion.close()
+            print('Connexion closed by stop')
+        except:
+            pass
 
-        def run(self):
-            i = 0
-            while i < 20:
-                try:
-                    self.graph_data = tcp_server_st.df
-                    # print(i, self.graph_data.shape)
-                    time.sleep(1)
-                except:
-                    time.sleep(1)
-                i += 1
+    while stop_value == 0:
 
-
-
-    print('ok for stream')
-
-    tcp_server_st = tcp_server_streamlit()
-    data_disp = data_display()
-
-    # plotting_thr = plotting()
-    print('Ready for stream')
-
-    tcp_server_st.start()
-    data_disp.start()
-    # plotting_thr.start()
-
-
-    # tcp_server_st.join()
-    # data_disp.join()
-    # plotting_thr.join()
-
-    iteration = 0
-    limit = 500
-    while True:
-        iteration += 1
-        print('iteration: ', iteration)
-        x = data_disp.graph_data[-limit:].index.values
-        y = data_disp.graph_data[-limit:]['ECG'].values
-        graph_generation(chart, x, y, slider_y_axis, 1)
-        time.sleep(1)
-
-    print('over')
+        print('Starting stream\n')
+        while stop_value == 0:
+            x, y = graph_data_handler.update_graph_data_stream(
+                df_ecg=thr_data_disp.graph_data,
+                time_window=time_window)
+            graph_generation(chart, x, y, y_axis, 1)
