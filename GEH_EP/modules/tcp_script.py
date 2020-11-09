@@ -7,34 +7,17 @@
 # Licensed under terms of MIT License (http://opensource.org/licenses/MIT).
 #
 
-# In Python3
+# Adaptation from https://github.com/patchinc/heartypatch/blob/master/
+# python/heartypatch_downloader_protocol3.py
 
 import socket
-# from pprint import pprint
-# import os
 import sys
 import signal as sys_signal
 import struct
-
-import numpy as np
 import pandas as pd
-# import matplotlib.pyplot as plt
 import scipy.signal as signal
-import time
 import datetime
-from graph_utilities import generate_graph_data_handler
 from sockets_utilities import tcp_client_streamlit
-
-
-# max_packets = 10000
-# max_seconds = 5  # default recording duration is 10min
-# hp_host = 'heartypatch.local'
-# hp_port = 4567
-
-df_ecg = pd.DataFrame(columns=['ECG'], data=[0])
-# time_window = 5
-# graph_data_handler = generate_graph_data_handler(df_ecg=df_ecg,
-#                                                 time_window=time_window)
 
 
 class HeartyPatch_TCP_Parser:
@@ -80,11 +63,6 @@ class HeartyPatch_TCP_Parser:
         self.all_hr = []
         self.all_ecg = []
         self.df = pd.DataFrame(columns=['timestamp', 'ECG'])
-        # self.df_ecg = pd.DataFrame(columns=['ECG'], data=[0])
-        # self.time_window = 5
-
-        #  self.df['duration'] = 0
-        # Remove?
         pass
 
     def add_data(self, new_data):
@@ -121,29 +99,10 @@ class HeartyPatch_TCP_Parser:
                     break
 
                 if (self.data[self.CES_CMDIF_IND_PKTTYPE] != self.Expected_Type
-                    or self.data[self.CES_CMDIF_PKT_OVERHEAD+pkt_len+1] != self.CES_CMDIF_PKT_STOP):
+                        or self.data[self.CES_CMDIF_PKT_OVERHEAD+pkt_len+1]
+                        != self.CES_CMDIF_PKT_STOP):
 
                     print('unexpected_type')
-#                    if True:
-#                          print('pkt_len', pkt_len)
-#                          print(self.data[self.CES_CMDIF_IND_PKTTYPE], self.Expected_Type)
-#                          print(self.data[self.CES_CMDIF_IND_PKTTYPE] != self.Expected_Type)
-#
-#                          for j in range(0, self.CES_CMDIF_PKT_OVERHEAD):
-#                              print format(ord(self.data[j]),'02x'),
-#                          print
-#
-#                            for j in range(self.CES_CMDIF_PKT_OVERHEAD, self.CES_CMDIF_PKT_OVERHEAD+pkt_len):
-#                                print format(ord(self.data[j]),'02x'),
-#                            print
-#
-#                            for j in range(self.CES_CMDIF_PKT_OVERHEAD+pkt_len, self.CES_CMDIF_PKT_OVERHEAD+pkt_len+2):
-#                                print format(ord(self.data[j]),'02x'),
-#                            print
-#                            print self.CES_CMDIF_PKT_STOP,
-#                            print ord(self.data[self.CES_CMDIF_PKT_OVERHEAD+pkt_len+2]) != self.CES_CMDIF_PKT_STOP
-#                            print
-#                        pass
 
                 # Unexpected packet format
                     self.state = self.CESState_Init
@@ -189,9 +148,10 @@ class HeartyPatch_TCP_Parser:
                     ecg = struct.unpack('<i', payload[ptr:ptr+4])[0] / 1000.0
                     self.all_ecg.append(ecg)
                     retrieved_data += 1
-                    self.df = self.df.append({'timestamp': self.all_ts[-1],'ECG': ecg}, ignore_index=True)
+                    self.df = self.df.append({'timestamp': self.all_ts[-1],
+                                              'ECG': ecg}, ignore_index=True)
                     ptr += self.ces_pkt_ecg_bytes
-     
+
                 self.packet_count += 1
                 self.state = self.CESState_Init
                 # start from beginning
@@ -201,8 +161,6 @@ class HeartyPatch_TCP_Parser:
 class connect_hearty_patch:
 
     def __init__(self, hp_host='heartypatch.local', hp_port=4567):
-
-        print('attempting connexion')
 
         self.hp_host = hp_host
         self.hp_port = hp_port
@@ -244,7 +202,7 @@ def get_heartypatch_data(
         hp.process_packets()
 
         # what to send to streamlit
-        data_to_send = str(hp.all_ts[-1]) +','+ str(hp.all_ecg[-8:])[1:-1]
+        data_to_send = str(hp.all_ts[-1]) + ',' + str(hp.all_ecg[-8:])[1:-1]
         tcp_client_st.send_to_st_client(data_to_send=data_to_send)
         i += 1
 
@@ -258,41 +216,41 @@ def get_heartypatch_data(
             sys.stdout.write(str(hp.packet_count//1000))
             sys.stdout.flush()
 
-        if datetime.datetime.today() - tStart > datetime.timedelta(seconds=max_seconds):
+        if datetime.datetime.today() - tStart > (
+           datetime.timedelta(seconds=max_seconds)):
             break
 
 
 def finish():
-    # global soc
-    # global hp
-    # global timer
-    # global fname
 
     tcp_client_st.send_to_st_client(data_to_send=b'close')
 
     if connexion.sock is not None:
         connexion.sock.close()
 
-    if tcp_client_st is not None:
-        tcp_client_st.close()
+    if tcp_client_st.st_socket_client is not None:
+        tcp_client_st.st_socket_client.close()
 
-    hp.df.to_csv('data/results/df - {}.csv'.format(tStart.strftime('%Y-%m-%d - %H-%M-%S')), index=False)
+    hp.df.to_csv('data/results/df - {}.csv'.format(
+        tStart.strftime('%Y-%m-%d - %H-%M-%S')),
+        index=False)
+
 
 def signal_handler(signal, frame):
 
     print('Interrupted by Ctrl+C!')
     finish()
     sys.exit(0)
+    print('\nProperly Run!')
 
 
-if __name__== "__main__":
+if __name__ == "__main__":
 
     # parameters
 
     max_packets = -1
-    max_seconds = 5  # default recording duration is 5min
+    max_seconds = 5
     hp_host = 'heartypatch.local'
-
 
     # sys argv
 
@@ -321,8 +279,7 @@ if __name__== "__main__":
             print('Unknown argument' + str(sys.argv[i]))
             help()
 
-
-    # all function calling
+    # Class initialisation and start of streaming
     connexion = connect_hearty_patch()
     tcp_client_st = tcp_client_streamlit()
     hp = HeartyPatch_TCP_Parser()
@@ -333,5 +290,3 @@ if __name__== "__main__":
                          max_seconds=max_seconds,
                          hp_host=hp_host)
     finish()
-
-    print('\nProperly Run!')

@@ -20,7 +20,6 @@ import numpy as np
 import pandas as pd
 # import matplotlib.pyplot as plt
 import scipy.signal as signal
-import time
 import datetime
 from graph_utilities import generate_graph_data_handler
 from sockets_utilities import tcp_client_streamlit
@@ -121,29 +120,10 @@ class HeartyPatch_TCP_Parser:
                     break
 
                 if (self.data[self.CES_CMDIF_IND_PKTTYPE] != self.Expected_Type
-                    or self.data[self.CES_CMDIF_PKT_OVERHEAD+pkt_len+1] != self.CES_CMDIF_PKT_STOP):
+                    or self.data[self.CES_CMDIF_PKT_OVERHEAD+pkt_len+1]
+                    != self.CES_CMDIF_PKT_STOP):
 
                     print('unexpected_type')
-#                    if True:
-#                          print('pkt_len', pkt_len)
-#                          print(self.data[self.CES_CMDIF_IND_PKTTYPE], self.Expected_Type)
-#                          print(self.data[self.CES_CMDIF_IND_PKTTYPE] != self.Expected_Type)
-#
-#                          for j in range(0, self.CES_CMDIF_PKT_OVERHEAD):
-#                              print format(ord(self.data[j]),'02x'),
-#                          print
-#
-#                            for j in range(self.CES_CMDIF_PKT_OVERHEAD, self.CES_CMDIF_PKT_OVERHEAD+pkt_len):
-#                                print format(ord(self.data[j]),'02x'),
-#                            print
-#
-#                            for j in range(self.CES_CMDIF_PKT_OVERHEAD+pkt_len, self.CES_CMDIF_PKT_OVERHEAD+pkt_len+2):
-#                                print format(ord(self.data[j]),'02x'),
-#                            print
-#                            print self.CES_CMDIF_PKT_STOP,
-#                            print ord(self.data[self.CES_CMDIF_PKT_OVERHEAD+pkt_len+2]) != self.CES_CMDIF_PKT_STOP
-#                            print
-#                        pass
 
                 # Unexpected packet format
                     self.state = self.CESState_Init

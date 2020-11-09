@@ -28,9 +28,9 @@ class tcp_server_streamlit:
         self.st_socket_server.bind((host, port))
         self.st_socket_server.listen(10)
 
-        self.st_connexion, infos = self.st_socket_server.accept()
+        self.st_connexion, st_address = self.st_socket_server.accept()
 
-        sys.stdout.write('Connexion established\n')
+        sys.stdout.write('Connexion established with {}\n'.format(st_address))
         sys.stdout.flush()
 
         self.data_received = self.st_connexion.recv(1024)
