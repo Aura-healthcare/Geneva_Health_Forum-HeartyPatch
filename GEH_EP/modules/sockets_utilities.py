@@ -15,7 +15,8 @@ class tcp_client_streamlit:
 
     def send_to_st_client(self, data_to_send=''):
         print(data_to_send)
-        data_to_send = data_to_send.encode()
+        if type(data_to_send) != bytes:
+            data_to_send = data_to_send.encode()
         print(data_to_send)
         print(data_to_send)
         self.st_socket_client.send(data_to_send)
@@ -46,7 +47,10 @@ class tcp_server_streamlit:
             data_decoded = self.data_received.decode()
             print(data_decoded)
             self.data_received = self.st_connexion.recv(1024)
-        self.data_received.close()
+        self.st_connexion.close()
+        sys.stdout.write('Connexion closed\n')
+        sys.stdout.flush()
+
 
 if __name__ == "__main__":
 
