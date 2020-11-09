@@ -2,33 +2,12 @@ import socket
 import sys
 
 
-# def tcp_client_streamlit(host='localhost', port=12800):
-# 
-#     st_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#     st_socket.connect((host, port))
-#     
-#     sys.stdout.write('Connexion established\n')
-#     sys.stdout.flush()
-# 
-#     data_to_send = b""
-# 
-#     while True:
-#         data_to_send = input("> ")
-#         data_to_send = data_to_send.encode()
-#         # On envoie le message
-#         st_socket.send(data_to_send)
-#         #data_received = connexion_avec_serveur.recv(1024)
-#         #print(data_received.decode())
-# 
-#     print("Closing socket")
-#     st_socket.close()
-# 
-
 class tcp_client_streamlit:
 
-    def __init__(self, host='localhost', port=12800):
+    def __init__(self, host='localhost', port=12801):
 
-        self.st_socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.st_socket_client = socket.socket(socket.AF_INET,
+                                              socket.SOCK_STREAM)
         self.st_socket_client.connect((host, port))
 
         sys.stdout.write('Connexion established\n')
@@ -47,9 +26,10 @@ class tcp_client_streamlit:
 
 class tcp_server_streamlit:
 
-    def __init__(self, host='localhost', port=12800):
+    def __init__(self, host='localhost', port=12801):
 
-        self.st_socket_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.st_socket_server = socket.socket(socket.AF_INET,
+                                              socket.SOCK_STREAM)
         self.st_socket_server.bind((host, port))
         self.st_socket_server.listen(10)
 
@@ -61,14 +41,12 @@ class tcp_server_streamlit:
         self.data_received = self.st_connexion.recv(1024)
 
     def receive_and_process(self):
-        while True:
+
+        while self.data_received != b'close':
             data_decoded = self.data_received.decode()
             print(data_decoded)
             self.data_received = self.st_connexion.recv(1024)
-
-    def close(self):
-        self.st_socket_server.close()
-
+        self.data_received.close()
 
 if __name__ == "__main__":
 
