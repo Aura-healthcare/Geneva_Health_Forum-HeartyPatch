@@ -14,15 +14,9 @@ class tcp_client_streamlit:
         sys.stdout.flush()
 
     def send_to_st_client(self, data_to_send=''):
-        print(data_to_send)
         if type(data_to_send) != bytes:
             data_to_send = data_to_send.encode()
-        print(data_to_send)
-        print(data_to_send)
         self.st_socket_client.send(data_to_send)
-
-    def close(self):
-        self.st_socket_client.close()
 
 
 class tcp_server_streamlit:
@@ -59,6 +53,6 @@ if __name__ == "__main__":
         tcp_server_st.receive_and_process()
     elif sys.argv[1] == '--client':
         tcp_client_st = tcp_client_streamlit()
-        # tcp_client_st.st_socket_client.send(b'test')
+        tcp_client_st.st_socket_client.send(b'test')
     else:
         print("Valid arguments are '--server' and '--client'")

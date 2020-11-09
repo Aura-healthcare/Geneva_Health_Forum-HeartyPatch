@@ -233,9 +233,9 @@ class connect_hearty_patch:
             self.sock.close()
 
 
-connexion = connect_hearty_patch()
-socket_test = connexion.sock
-#streamlit_connexion = tcp_server_streamlit()
+# connexion = connect_hearty_patch()
+# socket_test = connexion.sock
+# streamlit_connexion = tcp_server_streamlit()
 
 
 def get_heartypatch_data(
