@@ -27,7 +27,7 @@ fs = 180
 def detect_qrs_swt(ecg_data, fs):
     qrs_frames = []
     try:
-        detectors = Detectors(fs)
+        detectors = Detectors(fs) # Explain why
         qrs_frames = detectors.swt_detector(ecg_data)
     except Exception:
         # raise ValueError("swt")
@@ -48,7 +48,7 @@ def detect_qrs_xqrs(ecg_data, fs):
 def detect_qrs_gqrs(ecg_data, fs):
     qrs_frames = []
     try:
-        qrs_frames = processing.qrs.gqrs_detect(sig=ecg_data, fs=fs*2)
+        qrs_frames = processing.qrs.gqrs_detect(sig=ecg_data, fs=fs)
     except Exception:
         print("Exception in detect_qrs_gqrs")
     return qrs_frames.tolist()
@@ -58,11 +58,11 @@ def detect_qrs_gqrs(ecg_data, fs):
 
 def get_cardiac_infos(ecg_data, fs, method):
     if method == "xqrs":
-        qrs_frames = detect_qrs_xqrs(ecg_data, fs)
+        qrs_frames = detect_qrs_xqrs(ecg_data, fs*2) # Explain
     elif method == "gqrs":
-        qrs_frames = detect_qrs_gqrs(ecg_data, fs)
+        qrs_frames = detect_qrs_gqrs(ecg_data, fs*1) # Explain
     elif method == "swt":
-        qrs_frames = detect_qrs_swt(ecg_data, fs)
+        qrs_frames = detect_qrs_gqrs(ecg_data, fs*1) # Explains
 
     rr_intervals = np.zeros(0)
     hr = np.zeros(0)
@@ -150,6 +150,19 @@ def make_report(data):
         " Swt " +
         str(len(data['swt']['qrs']))
         )
+
+
+    # HR
+
+    print(
+        "\nAverage Heart rate " +
+        str(np.average(data['gqrs']['hr'])) +
+        " XQRS " +
+        str(np.average(data['xqrs']['hr'])) +
+        " Swt " +
+        str(np.average(data['swt']['hr']))
+        )
+
 
     # Coef score
 

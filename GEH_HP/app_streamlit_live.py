@@ -90,10 +90,16 @@ swt_value_list = []
 st_gqrs = st.empty()
 st_xqrs = st.empty()
 st_swt = st.empty()
+st_gqrs_avg = st.empty()
+st_xqrs_avg = st.empty()
+st_swt_avg = st.empty()
 
 st_gqrs.write('**GQRS : {} **'.format(gqrs_value))
 st_xqrs.write('**XWRS : {} **'.format(xqrs_value))
 st_swt.write('**SWT  : {} **'.format(swt_value))
+st_gqrs_avg.write('**AVG GQRS : {} **'.format(swt_value))
+st_xqrs_avg.write('**AVG XQRS : {} **'.format(swt_value))
+st_swt_avg.write('**AVG SWG  : {} **'.format(swt_value))
 
 
 chart = st.empty()
@@ -106,6 +112,7 @@ st.status = st.sidebar.markdown(
     unsafe_allow_html=True)
 print('Ready for stream !')
 
+
 if st.sidebar.button(label='Start'):
 
     # Initializing threads
@@ -117,7 +124,6 @@ if st.sidebar.button(label='Start'):
 
     thr_tcp_server_st.start()
     thr_data_delay.start()
-
     print('Starting stream\n')
 
     if st.sidebar.button(label='Stop'):
@@ -142,6 +148,15 @@ if st.sidebar.button(label='Start'):
             xqrs_value = np.average(compute_hr.data['xqrs']['hr'][-10:])
             swt_value = np.average(compute_hr.data['xqrs']['hr'][-10:])
 
+            if gqrs_value > 0:
+                gqrs_value_list.append(gqrs_value)
+
+            if xqrs_value > 0:
+                xqrs_value_list.append(xqrs_value)
+
+            if swt_value > 0:
+                swt_value_list.append(swt_value)
+
             # gqrs_value_list.append(gqrs_value)
             # xqrs_value_list.append(xqrs_value)
             # swt_value_list.append(swt_value)
@@ -149,6 +164,14 @@ if st.sidebar.button(label='Start'):
             st_gqrs.write('**GQRS : {} **'.format(gqrs_value))
             st_xqrs.write('**XWRS : {} **'.format(xqrs_value))
             st_swt.write('**SWT  : {} **'.format(swt_value))
+            # last 20 values for average
+            last_values=20
+
+            st_gqrs_avg.write('**AVG GQRS : {} **'.format(np.average(gqrs_value_list[-last_values:])))
+            st_xqrs_avg.write('**AVG XWRS : {} **'.format(np.average(xqrs_value_list[-last_values:])))
+            st_swt_avg.write('**AVG SWT   : {} **'.format(np.average(swt_value_list[-last_values:])))
 
         except Exception:
             pass
+
+        time.sleep(data_freq)
