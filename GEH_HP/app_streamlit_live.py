@@ -1,14 +1,16 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 from modules.graph_utilities import (generate_graph_data_handler,
                                      graph_generation)
 from modules.sockets_utilities import tcp_server_streamlit
+from modules.RR_detection import compute_heart_rate
 from threading import Thread
 import time
 
-# data_delay
-
-
+#
+df_input = pd.read_csv('data/simulation/df_simulation-timestamp.csv',
+sep=';')
 # Initializing time window
 stop_value = 0
 
@@ -25,9 +27,9 @@ time_window = st.sidebar.slider(
 data_freq = st.sidebar.slider(
     label='Graph actualisation frequency (Hz):',
     min_value=1,
-    max_value=100,
-    step=2,
-    value=10)
+    max_value=15,
+    step=1,
+    value=3)
 
 y_axis = st.sidebar.slider(
     label='y-axis modifier:',
@@ -76,6 +78,24 @@ graph_data_handler = load_graph_data_handler(df_ecg=df_ecg,
 # MAIN WINDOW
 st.title(body='ECG Visualization')
 
+
+gqrs_value = 0
+xqrs_value = 0
+swt_value = 0
+
+gqrs_value_list = []
+xqrs_value_list = []
+swt_value_list = []
+
+st_gqrs = st.empty()
+st_xqrs = st.empty()
+st_swt = st.empty()
+
+st_gqrs.write('**GQRS : {} **'.format(gqrs_value))
+st_xqrs.write('**XWRS : {} **'.format(xqrs_value))
+st_swt.write('**SWT  : {} **'.format(swt_value))
+
+
 chart = st.empty()
 x, y = graph_data_handler.x_axis, graph_data_handler.y_axis
 graph_generation(chart, x, y, y_axis, 1)
@@ -93,6 +113,7 @@ if st.sidebar.button(label='Start'):
 
     thr_tcp_server_st = tcp_server_streamlit()
     thr_data_delay = data_delay(data_freq=data_freq)
+    compute_hr = compute_heart_rate()
 
     thr_tcp_server_st.start()
     thr_data_delay.start()
@@ -108,7 +129,26 @@ if st.sidebar.button(label='Start'):
             pass
 
     while stop_value == 0:
-
+        
         x, y = graph_data_handler.update_graph_data_stream(
             df_ecg=thr_data_delay.graph_data)
         graph_generation(chart, x, y, y_axis, 1)
+
+        compute_hr.compute(df_input=thr_data_delay.graph_data[-128*20:])
+
+        try:
+
+            gqrs_value = np.average(compute_hr.data['gqrs']['hr'][-10:])
+            xqrs_value = np.average(compute_hr.data['xqrs']['hr'][-10:])
+            swt_value = np.average(compute_hr.data['xqrs']['hr'][-10:])
+
+            # gqrs_value_list.append(gqrs_value)
+            # xqrs_value_list.append(xqrs_value)
+            # swt_value_list.append(swt_value)
+
+            st_gqrs.write('**GQRS : {} **'.format(gqrs_value))
+            st_xqrs.write('**XWRS : {} **'.format(xqrs_value))
+            st_swt.write('**SWT  : {} **'.format(swt_value))
+
+        except Exception:
+            pass
