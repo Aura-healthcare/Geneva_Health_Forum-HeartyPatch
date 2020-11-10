@@ -35,9 +35,8 @@ class tcp_server_streamlit(Thread):
 
         sys.stdout.write('Connexion established with {}\n'.format(st_address))
         sys.stdout.flush()
-
-        self.data_received = self.st_connexion.recv(1024)
         self.df = pd.DataFrame(columns=['timestamp', 'ECG'])
+        self.data_received = self.st_connexion.recv(1024)
 
     def receive_and_process(self):
 
@@ -54,15 +53,14 @@ class tcp_server_streamlit(Thread):
                         'timestamp': temp_list[0]+((i-1)/128),
                         'ECG': temp_list[i]},
                                             ignore_index=True)
-            except:
+            except Exception:
                 print('bad data received')
-
             self.data_received = self.st_connexion.recv(1024)
 
         try:
             self.st_connexion.close()
             sys.stdout.write('Connexion closed\n')
-        except:
+        except Exception:
             sys.stdout.write('Connexion already closed\n')
 
         sys.stdout.flush()

@@ -1,9 +1,7 @@
 import numpy as np
 import pandas as pd
 import plotly.express as px
-from threading import Thread
 # from graph_utilities.py import tcp_server_streamlit
-import time
 
 
 class generate_graph_data_handler():
@@ -50,7 +48,7 @@ class generate_graph_data_handler():
 
         return self.x_axis, self.y_axis
 
-    def update_graph_data_stream(self, df_ecg: pd.DataFrame, time_window: int)\
+    def update_graph_data_stream(self, df_ecg: pd.DataFrame) \
             -> [np.array, np.array]:
 
         self.df_graph_data_stream = df_ecg
@@ -59,20 +57,18 @@ class generate_graph_data_handler():
         self.last_second_displayed = self.df_graph_data_stream['timestamp']\
             .iloc[-1]
         ending_frame = self.last_second_displayed - (
-            (self.last_second_displayed % self.time_window)
-            + self.time_window)
+            self.last_second_displayed % self.time_window) + (
+            self.time_window)
 
         self.y_axis = self.df_graph_data_stream['ECG'][
-            (self.df_graph_data_stream['timestamp'] < ending_frame) & (
-                self.df_graph_data_stream['timestamp'] >=
-                (ending_frame - self.time_window))
-            ]
+            (self.df_graph_data_stream['timestamp'] < ending_frame) &
+            (self.df_graph_data_stream['timestamp'] >= (
+                ending_frame - self.time_window))]
 
         self.x_axis = self.df_graph_data_stream['timestamp'][
             (self.df_graph_data_stream['timestamp'] < ending_frame) & (
                 self.df_graph_data_stream['timestamp'] >=
-                (ending_frame - self.time_window))
-            ]
+                (ending_frame - self.time_window))]
 
         if (ending_frame - (self.last_second_displayed) %
                 self.time_window) > 0:
@@ -118,26 +114,3 @@ def graph_generation(chart, x, y, slider_y_axis, data_freq):
                   labels={'x': 'seconds', 'y': 'ECG value'})
     chart.empty()
     chart.plotly_chart(figure_or_data=fig)
-
-
-stop_value = 0
-# tcp_server_st = tcp_server_streamlit()
-tcp_server_st = None
-
-
-class data_delay(Thread):
-
-    def __init__(self, data_freq=1):
-        Thread.__init__(self)
-        self.graph_data = pd.DataFrame()
-        self.data_freq = data_freq
-
-    def run(self):
-        # To DO : make it real time and delete?
-
-        while stop_value == 0:
-            try:
-                self.graph_data = tcp_server_st.df
-                time.sleep(self.data_freq)
-            except:
-                time.sleep(self.data_freq)

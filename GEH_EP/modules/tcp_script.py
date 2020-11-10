@@ -249,7 +249,7 @@ if __name__ == "__main__":
     # parameters
 
     max_packets = -1
-    max_seconds = 5
+    max_seconds = 5*60  # 5 minutes
     hp_host = 'heartypatch.local'
 
     # sys argv
