@@ -2,18 +2,15 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from modules.graph_utilities import (generate_graph_data_handler,
-                                     graph_generation)
+                                     fig_generation)
 from modules.sockets_utilities import tcp_server_streamlit
 from modules.RR_detection import compute_heart_rate
 from threading import Thread
 import time
 
-#
-df_input = pd.read_csv('data/simulation/df_simulation-timestamp.csv',
-sep=';')
+
 # Initializing time window
 stop_value = 0
-
 
 st.sidebar.subheader('Parameters')
 
@@ -29,7 +26,7 @@ data_freq = st.sidebar.slider(
     min_value=1,
     max_value=15,
     step=1,
-    value=3)
+    value=2)
 
 y_axis = st.sidebar.slider(
     label='y-axis modifier:',
@@ -78,10 +75,10 @@ graph_data_handler = load_graph_data_handler(df_ecg=df_ecg,
 # MAIN WINDOW
 st.title(body='ECG Visualization')
 
-
 gqrs_value = 0
 xqrs_value = 0
 swt_value = 0
+last_values = 20
 
 gqrs_value_list = []
 xqrs_value_list = []
@@ -102,9 +99,9 @@ st_xqrs_avg.write('**AVG XQRS : {} **'.format(swt_value))
 st_swt_avg.write('**AVG SWG  : {} **'.format(swt_value))
 
 
-chart = st.empty()
 x, y = graph_data_handler.x_axis, graph_data_handler.y_axis
-graph_generation(chart, x, y, y_axis, 1)
+chart = fig_generation(x, y, y_axis, data_freq)
+chart_dispay = st.plotly_chart(figure_or_data=chart)
 
 # to do: improve warning
 st.status = st.sidebar.markdown(
@@ -116,7 +113,7 @@ print('Ready for stream !')
 if st.sidebar.button(label='Start'):
 
     # Initializing threads
-    print('Waiting for HP connexion...')
+    print('Waiting for HP connexion')
 
     thr_tcp_server_st = tcp_server_streamlit()
     thr_data_delay = data_delay(data_freq=data_freq)
@@ -135,18 +132,19 @@ if st.sidebar.button(label='Start'):
             pass
 
     while stop_value == 0:
-        
-        x, y = graph_data_handler.update_graph_data_stream(
-            df_ecg=thr_data_delay.graph_data)
-        graph_generation(chart, x, y, y_axis, 1)
 
-        compute_hr.compute(df_input=thr_data_delay.graph_data[-128*20:])
+        chart.data[0]['x'], chart.data[0]['y'] = \
+            graph_data_handler.update_graph_data_stream(
+                df_ecg=thr_data_delay.graph_data)
+
+        chart_dispay.plotly_chart(figure_or_data=chart)
+        compute_hr.compute(df_input=thr_data_delay.graph_data[-128*10:])
 
         try:
 
-            gqrs_value = np.average(compute_hr.data['gqrs']['hr'][-10:])
-            xqrs_value = np.average(compute_hr.data['xqrs']['hr'][-10:])
-            swt_value = np.average(compute_hr.data['xqrs']['hr'][-10:])
+            gqrs_value = np.average(compute_hr.data['gqrs']['hr'][-5:])
+            xqrs_value = np.average(compute_hr.data['xqrs']['hr'][-5:])
+            swt_value = np.average(compute_hr.data['xqrs']['hr'][-5:])
 
             if gqrs_value > 0:
                 gqrs_value_list.append(gqrs_value)
@@ -157,19 +155,17 @@ if st.sidebar.button(label='Start'):
             if swt_value > 0:
                 swt_value_list.append(swt_value)
 
-            # gqrs_value_list.append(gqrs_value)
-            # xqrs_value_list.append(xqrs_value)
-            # swt_value_list.append(swt_value)
-
-            st_gqrs.write('**GQRS : {} **'.format(gqrs_value))
-            st_xqrs.write('**XWRS : {} **'.format(xqrs_value))
-            st_swt.write('**SWT  : {} **'.format(swt_value))
+            st_gqrs.write('**GQRS : {} **'.format(int(round(gqrs_value, 0))))
+            st_xqrs.write('**XWRS : {} **'.format(int(round(xqrs_value, 0))))
+            st_swt.write('**SWT  : {} **'.format(int(round(swt_value, 0))))
             # last 20 values for average
-            last_values=20
 
-            st_gqrs_avg.write('**AVG GQRS : {} **'.format(np.average(gqrs_value_list[-last_values:])))
-            st_xqrs_avg.write('**AVG XWRS : {} **'.format(np.average(xqrs_value_list[-last_values:])))
-            st_swt_avg.write('**AVG SWT   : {} **'.format(np.average(swt_value_list[-last_values:])))
+            st_gqrs_avg.write('**AVG GQRS : {} **'.format(int(round(
+                np.average(gqrs_value_list[-last_values:]), 0))))
+            st_xqrs_avg.write('**AVG XWRS : {} **'.format(int(round(
+                np.average(xqrs_value_list[-last_values:]), 0))))
+            st_swt_avg.write('**AVG SWT   : {} **'.format(int(round(
+                np.average(swt_value_list[-last_values:]), 0))))
 
         except Exception:
             pass

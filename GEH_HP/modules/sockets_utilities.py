@@ -47,7 +47,9 @@ class tcp_server_streamlit(Thread):
             # Processing the data received
             # TO DO : modify timestamp for duration
             try:
-                temp_list = list(map(float, data_decoded.split(',')))
+                data_decoded = data_decoded.split(',')
+                data_decoded = [x for x in data_decoded if x != '']
+                temp_list = list(map(float, data_decoded))
                 for i in range(1, len(temp_list)):
                     self.df = self.df.append({
                         'timestamp': temp_list[0]+((i-1)/128),
@@ -55,6 +57,7 @@ class tcp_server_streamlit(Thread):
                                             ignore_index=True)
             except Exception:
                 print('bad data received')
+                print(data_decoded)
             self.data_received = self.st_connexion.recv(1024)
 
         try:

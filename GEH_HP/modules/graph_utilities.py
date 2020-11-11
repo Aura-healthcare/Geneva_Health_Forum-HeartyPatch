@@ -114,3 +114,17 @@ def graph_generation(chart, x, y, slider_y_axis, data_freq):
                   labels={'x': 'seconds', 'y': 'ECG value'})
     chart.empty()
     chart.plotly_chart(figure_or_data=fig)
+
+
+def fig_generation(x, y, y_axis, data_freq):
+
+    fig = px.line(x=x,
+                  y=y,
+                  title='Live EEG',
+                  range_y=y_axis,
+                  color_discrete_sequence=['green'],
+                  render_mode='svg',
+                  template='plotly_white',
+                  height=600,
+                  labels={'x': 'seconds', 'y': 'ECG value'})
+    return fig

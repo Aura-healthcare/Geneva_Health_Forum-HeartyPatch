@@ -58,11 +58,11 @@ def detect_qrs_gqrs(ecg_data, fs):
 
 def get_cardiac_infos(ecg_data, fs, method):
     if method == "xqrs":
-        qrs_frames = detect_qrs_xqrs(ecg_data, fs*2) # Explain
+        qrs_frames = detect_qrs_xqrs(ecg_data, fs) # Explain
     elif method == "gqrs":
-        qrs_frames = detect_qrs_gqrs(ecg_data, fs*1) # Explain
+        qrs_frames = detect_qrs_gqrs(ecg_data, fs*2) # Explain
     elif method == "swt":
-        qrs_frames = detect_qrs_gqrs(ecg_data, fs*1) # Explains
+        qrs_frames = detect_qrs_gqrs(ecg_data, fs*2) # Explains
 
     rr_intervals = np.zeros(0)
     hr = np.zeros(0)
@@ -291,7 +291,7 @@ if __name__ == "__main__":
     df_input = pd.read_csv('data/simulation/df_simulation-timestamp.csv',
         sep=';')
     # fs = 128
-    
+
     compute_hr = compute_heart_rate()
     compute_hr.compute(df_input=df_input)
     data = compute_hr.data
