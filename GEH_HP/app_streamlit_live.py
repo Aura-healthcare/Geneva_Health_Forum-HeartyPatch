@@ -9,10 +9,14 @@ from threading import Thread
 import time
 
 
+heartypach_frequency = 128
+
 # Initializing time window
 stop_value = 0
 
-st.sidebar.subheader('Parameters')
+st.sidebar.header('Parameters')
+
+st.sidebar.subheader('Graph')
 
 time_window = st.sidebar.slider(
     label='Seconds to display:',
@@ -35,7 +39,33 @@ y_axis = st.sidebar.slider(
     step=100,
     value=(-1200, -600))
 
+st.sidebar.subheader('HR calculation')
+
+hr_delay = st.sidebar.slider(
+    label='Historic to compute (seconds) :',
+    min_value=1,
+    max_value=50,
+    step=1,
+    value=10)
+
+hr_smoothing = st.sidebar.slider(
+    label='HR smoothing (n last HR over the period):',
+    min_value=1,
+    max_value=10,
+    step=1,
+    value=3)
+
+hr_count_for_average = st.sidebar.slider(
+    label='HR average (n last HR):',
+    min_value=1,
+    max_value=30,
+    step=1,
+    value=10)
+
 data_freq = 1/data_freq  # Slider is clearer with the period
+hr_delay = int(hr_delay)
+hr_smoothing = int(hr_smoothing)
+hr_count_for_average = int(hr_count_for_average)
 
 
 class data_delay(Thread):
@@ -78,25 +108,30 @@ st.title(body='ECG Visualization')
 gqrs_value = 0
 xqrs_value = 0
 swt_value = 0
-last_values = 20
+hamilton_value = 0
 
 gqrs_value_list = []
 xqrs_value_list = []
 swt_value_list = []
+hamilton_value_list = []
 
 st_gqrs = st.empty()
 st_xqrs = st.empty()
 st_swt = st.empty()
+st_hamilton = st.empty()
 st_gqrs_avg = st.empty()
 st_xqrs_avg = st.empty()
 st_swt_avg = st.empty()
+st_hamilton_avg = st.empty()
 
 st_gqrs.write('**GQRS : {} **'.format(gqrs_value))
 st_xqrs.write('**XWRS : {} **'.format(xqrs_value))
 st_swt.write('**SWT  : {} **'.format(swt_value))
+st_hamilton.write('**Hamilton  : {} **'.format(swt_value))
 st_gqrs_avg.write('**AVG GQRS : {} **'.format(swt_value))
 st_xqrs_avg.write('**AVG XQRS : {} **'.format(swt_value))
 st_swt_avg.write('**AVG SWG  : {} **'.format(swt_value))
+st_hamilton_avg.write('**AVG Hamilton  : {} **'.format(swt_value))
 
 
 x, y = graph_data_handler.x_axis, graph_data_handler.y_axis
@@ -138,13 +173,19 @@ if st.sidebar.button(label='Start'):
                 df_ecg=thr_data_delay.graph_data)
 
         chart_dispay.plotly_chart(figure_or_data=chart)
-        compute_hr.compute(df_input=thr_data_delay.graph_data[-128*10:])
+        compute_hr.compute(df_input=thr_data_delay.graph_data[
+            -heartypach_frequency*hr_delay:])
 
         try:
 
-            gqrs_value = np.average(compute_hr.data['gqrs']['hr'][-5:])
-            xqrs_value = np.average(compute_hr.data['xqrs']['hr'][-5:])
-            swt_value = np.average(compute_hr.data['xqrs']['hr'][-5:])
+            gqrs_value = np.average(compute_hr.data
+                                    ['gqrs']['hr'][-hr_smoothing:])
+            xqrs_value = np.average(compute_hr.data
+                                    ['xqrs']['hr'][-hr_smoothing:])
+            swt_value = np.average(compute_hr.data
+                                   ['xqrs']['hr'][-hr_smoothing:])
+            hamilton_value = np.average(compute_hr.data
+                                        ['hamilton']['hr'][-hr_smoothing:])
 
             if gqrs_value > 0:
                 gqrs_value_list.append(gqrs_value)
@@ -155,17 +196,28 @@ if st.sidebar.button(label='Start'):
             if swt_value > 0:
                 swt_value_list.append(swt_value)
 
-            st_gqrs.write('**GQRS : {} **'.format(int(round(gqrs_value, 0))))
-            st_xqrs.write('**XWRS : {} **'.format(int(round(xqrs_value, 0))))
-            st_swt.write('**SWT  : {} **'.format(int(round(swt_value, 0))))
+            if hamilton_value > 0:
+                hamilton_value_list.append(hamilton_value)
+
+            st_gqrs.write('**GQRS : {} **'.format(
+                int(round(gqrs_value, 0))))
+            st_xqrs.write('**XWRS : {} **'.format(
+                int(round(xqrs_value, 0))))
+            st_swt.write('**SWT  : {} **'.format(
+                int(round(swt_value, 0))))
+            st_hamilton.write('**Hamilton  : {} **'.format(
+                int(round(hamilton_value, 0))))
+
             # last 20 values for average
 
             st_gqrs_avg.write('**AVG GQRS : {} **'.format(int(round(
-                np.average(gqrs_value_list[-last_values:]), 0))))
+                np.average(gqrs_value_list[-hr_count_for_average:]), 0))))
             st_xqrs_avg.write('**AVG XWRS : {} **'.format(int(round(
-                np.average(xqrs_value_list[-last_values:]), 0))))
+                np.average(xqrs_value_list[-hr_count_for_average:]), 0))))
             st_swt_avg.write('**AVG SWT   : {} **'.format(int(round(
-                np.average(swt_value_list[-last_values:]), 0))))
+                np.average(swt_value_list[-hr_count_for_average:]), 0))))
+            st_hamilton_avg.write('**AVG Hamitlon   : {} **'.format(int(round(
+                np.average(hamilton_value_list[-hr_count_for_average:]), 0))))
 
         except Exception:
             pass
