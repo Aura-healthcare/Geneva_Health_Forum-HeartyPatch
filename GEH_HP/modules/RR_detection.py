@@ -386,13 +386,17 @@ if __name__ == "__main__":
     compute_hr = compute_heart_rate()
     compute_hr.compute(df_input=df_input)
     data = compute_hr.data
+    make_report(data)
+
+#     np.save('data/simulation/data_df_simulation.npy', data)
+
 #     print(data['gqrs']['qrs'])
 #     print(data['xqrs']['qrs'])
 #     print(data['swt']['qrs'])
 #     print(data['hamilton']['qrs'])
-    make_report(data)
+#     make_report(data)
 
-    # temp_df = pd.DataFrame(columns=['RR'])
-    # temp_df['RR'] = data['gqrs']['hr']
-    # temp_df.to_csv('data/record/export_rr.csv')
-    # print('\nExport ok')
+# temp_df = pd.DataFrame(columns=['RR'])
+# temp_df['RR'] = data['gqrs']['hr']
+# temp_df.to_csv('data/record/export_rr.csv')
+# print('\nExport ok')

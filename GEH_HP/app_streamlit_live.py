@@ -5,8 +5,11 @@ from modules.graph_utilities import (generate_graph_data_handler,
                                      fig_generation)
 from modules.sockets_utilities import tcp_server_streamlit
 from modules.RR_detection import compute_heart_rate
+from modules.hrv_analysis import generate_psd_plot_hamilton
 from threading import Thread
 import time
+from PIL import Image
+import datetime
 
 
 heartypach_frequency = 128
@@ -149,6 +152,9 @@ print('Ready for stream !')
 
 if st.sidebar.button(label='Start'):
 
+    starting_timestamp = datetime.datetime.today()
+    trigger_timestamp = starting_timestamp + datetime.timedelta(seconds=60)
+
     st.sidebar.markdown(
         body='<span style="color: green"> Ready for stream! </span>',
         unsafe_allow_html=True)
@@ -177,6 +183,7 @@ if st.sidebar.button(label='Start'):
     thr_tcp_server_st = tcp_server_streamlit()
     thr_data_delay = data_delay(data_freq=data_freq)
     compute_hr = compute_heart_rate()
+    compute_hr_plot = compute_heart_rate()
 
     thr_tcp_server_st.start()
     thr_data_delay.start()
@@ -194,6 +201,22 @@ if st.sidebar.button(label='Start'):
             -heartypach_frequency*hr_delay:])
 
         try:
+
+            if trigger_timestamp-datetime.datetime.today() < (
+                    datetime.timedelta(seconds=0)):
+
+                compute_hr_plot.compute(df_input=thr_tcp_server_st.df)
+                generate_psd_plot_hamilton(data=compute_hr_plot.data,
+                                           sampling_frequency=(
+                                               heartypach_frequency))
+                image = Image.open('data/records/PSD - lomb.png')
+                st.image(image,
+                         caption='Duration of recording : {}'.format(
+                             str(trigger_timestamp-starting_timestamp)),
+                         use_column_width=True)
+
+                trigger_timestamp += datetime.timedelta(seconds=60)
+                print('PSD graph generated')
 
             gqrs_value = np.average(compute_hr.data
                                     ['gqrs']['hr'][-hr_smoothing:])
@@ -215,6 +238,7 @@ if st.sidebar.button(label='Start'):
 
             if hamilton_value > 0:
                 hamilton_value_list.append(hamilton_value)
+
 
             st_gqrs.write('**GQRS : {} **'.format(
                 int(round(gqrs_value, 0))))
@@ -252,19 +276,27 @@ if st.sidebar.button(label='Start'):
 
             for name_count in range(len(tags_list)):
                 for i in range(len(st_gqrs_tags)):
-                    if tags_list[name_count][i] > chart.data[0]['x'][0]:
-                        chart.layout.shapes[i + name_count*hr_displayed].x0 = \
-                            tags_list[name_count][i]
-                        chart.layout.shapes[i + name_count*hr_displayed].x1 = \
-                            tags_list[name_count][i]
-                    else:
-                        chart.layout.shapes[i + name_count*hr_displayed].x0 = \
-                            tags_list[name_count][-1]
-                        chart.layout.shapes[i + name_count*hr_displayed].x1 = \
-                            tags_list[name_count][-1]
+                    try:
+                        if tags_list[name_count][i] > chart.data[0]['x'][0]:
+                            chart.layout.shapes[i + name_count*hr_displayed]\
+                                .x0 = tags_list[name_count][i]
+                            chart.layout.shapes[i + name_count*hr_displayed]\
+                                .x1 = tags_list[name_count][i]
+                        else:
+                            chart.layout.shapes[i + name_count*hr_displayed]. \
+                                x0 = tags_list[name_count][-1]
+                            chart.layout.shapes[i + name_count*hr_displayed].\
+                                x1 = tags_list[name_count][-1]
+                    except Exception:
+                        print('bad graph generation')
 
         except Exception:
-            print('error')
+            print('Error')
+            try:
+                for i in tags_list:
+                    print(i)
+            except Exception:
+                pass
 
         chart_dispay.plotly_chart(figure_or_data=chart)
         time.sleep(1)
