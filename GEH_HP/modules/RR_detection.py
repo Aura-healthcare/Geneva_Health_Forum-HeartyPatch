@@ -261,15 +261,25 @@ class compute_heart_rate:
     def compute(self, df_input):
 
         ecg_data = np.array(df_input['ECG'].values)
+        beginning_frame = float(df_input['timestamp'].values[0])
 
         qrs_frames_gqrs, rr_intervals_gqrs, hr_gqrs = \
-            get_cardiac_infos(ecg_data, fs, "gqrs")
+            get_cardiac_infos(ecg_data, fs*2, "gqrs")  # Explain
         qrs_frames_xqrs, rr_intervals_xqrs, hr_xqrs = \
             get_cardiac_infos(ecg_data, fs, "xqrs")
         qrs_frames_swt, rr_intervals_swt, hr_swt = \
-            get_cardiac_infos(ecg_data, fs, "swt")
+            get_cardiac_infos(ecg_data, fs*2, "swt")  # Explain
         qrs_frames_hamilton, rr_intervals_hamilton, hr_hamilton = \
             get_cardiac_infos(ecg_data, fs, "hamilton")
+
+        hr_gqrs = hr_gqrs/2  # Explain
+        hr_swt = hr_swt/2  # Explain
+
+        qrs_frames_gqrs = beginning_frame + np.array(qrs_frames_gqrs)/fs
+        qrs_frames_xqrs = beginning_frame + np.array(qrs_frames_xqrs)/fs
+        qrs_frames_swt = beginning_frame + np.array(qrs_frames_swt)/fs
+        qrs_frames_hamilton = beginning_frame + np.array(
+            qrs_frames_hamilton)/fs
 
         frame_correl_1, matching_frames_1, missing_beats_duration_1 = \
             compute_qrs_frames_correlation(fs,
@@ -376,6 +386,10 @@ if __name__ == "__main__":
     compute_hr = compute_heart_rate()
     compute_hr.compute(df_input=df_input)
     data = compute_hr.data
+#     print(data['gqrs']['qrs'])
+#     print(data['xqrs']['qrs'])
+#     print(data['swt']['qrs'])
+#     print(data['hamilton']['qrs'])
     make_report(data)
 
     # temp_df = pd.DataFrame(columns=['RR'])

@@ -202,7 +202,7 @@ def get_heartypatch_data(
         hp.process_packets()
 
         # what to send to streamlit
-        data_to_send = str(hp.all_ts[-1]) + ',' + str(hp.all_ecg[-8:])[1:-1]
+        data_to_send = str(hp.all_ts[-1]) + ',' + str(hp.all_ecg[-8:])[1:-1] + ','
         tcp_client_st.send_to_st_client(data_to_send=data_to_send)
         i += 1
 

@@ -10,6 +10,7 @@ import time
 
 
 heartypach_frequency = 128
+hr_displayed = 10
 
 # Initializing time window
 stop_value = 0
@@ -30,7 +31,7 @@ data_freq = st.sidebar.slider(
     min_value=1,
     max_value=15,
     step=1,
-    value=2)
+    value=1)
 
 y_axis = st.sidebar.slider(
     label='y-axis modifier:',
@@ -133,19 +134,42 @@ st_xqrs_avg.write('**AVG XQRS : {} **'.format(swt_value))
 st_swt_avg.write('**AVG SWG  : {} **'.format(swt_value))
 st_hamilton_avg.write('**AVG Hamilton  : {} **'.format(swt_value))
 
+st_gqrs_tags = []
+st_xqrs_tags = []
+st_swt_tags = []
+st_hamilton_tags = []
 
 x, y = graph_data_handler.x_axis, graph_data_handler.y_axis
-chart = fig_generation(x, y, y_axis, data_freq)
+chart = fig_generation(x, y, y_axis, data_freq, hr_displayed)
 chart_dispay = st.plotly_chart(figure_or_data=chart)
 
 # to do: improve warning
-st.status = st.sidebar.markdown(
-    body='<span style="color: green"> Ready for stream! </span>',
-    unsafe_allow_html=True)
 print('Ready for stream !')
 
 
 if st.sidebar.button(label='Start'):
+
+    st.sidebar.markdown(
+        body='<span style="color: green"> Ready for stream! </span>',
+        unsafe_allow_html=True)
+
+    st.sidebar.subheader(body='Legend:')
+
+    st.sidebar.markdown(
+        body='<span style="color: red"> GQRS  </span>',
+        unsafe_allow_html=True)
+
+    st.sidebar.markdown(
+        body='<span style="color: blue"> XQRS </span>',
+        unsafe_allow_html=True)
+
+    st.sidebar.markdown(
+        body='<span style="color: violet"> SWT </span>',
+        unsafe_allow_html=True)
+
+    st.sidebar.markdown(
+        body='<span style="color: black"> Hamilton </span>',
+        unsafe_allow_html=True)
 
     # Initializing threads
     print('Waiting for HP connexion')
@@ -158,22 +182,15 @@ if st.sidebar.button(label='Start'):
     thr_data_delay.start()
     print('Starting stream\n')
 
-    if st.sidebar.button(label='Stop'):
-        stop_value = 1
-        try:
-            thr_tcp_server_st.st_connexion.close()
-            print('Connexion closed by stop')
-        except Exception:
-            pass
+    while True:
 
-    while stop_value == 0:
+        spot_df = thr_data_delay.graph_data
 
         chart.data[0]['x'], chart.data[0]['y'] = \
             graph_data_handler.update_graph_data_stream(
-                df_ecg=thr_data_delay.graph_data)
+                df_ecg=spot_df)
 
-        chart_dispay.plotly_chart(figure_or_data=chart)
-        compute_hr.compute(df_input=thr_data_delay.graph_data[
+        compute_hr.compute(df_input=spot_df[
             -heartypach_frequency*hr_delay:])
 
         try:
@@ -219,7 +236,35 @@ if st.sidebar.button(label='Start'):
             st_hamilton_avg.write('**AVG Hamitlon   : {} **'.format(int(round(
                 np.average(hamilton_value_list[-hr_count_for_average:]), 0))))
 
-        except Exception:
-            pass
+            st_gqrs_tags = np.array(compute_hr.data['gqrs']['qrs'][
+                -hr_displayed:])
+            st_xqrs_tags = np.array(compute_hr.data['xqrs']['qrs'][
+                -hr_displayed:])
+            st_swt_tags = np.array(compute_hr.data['swt']['qrs'][
+                -hr_displayed:])
+            st_hamilton_tags = np.array(compute_hr.data['hamilton']['qrs'][
+                -hr_displayed:])
 
-        time.sleep(data_freq)
+            tags_list = [st_gqrs_tags,
+                         st_xqrs_tags,
+                         st_swt_tags,
+                         st_hamilton_tags]
+
+            for name_count in range(len(tags_list)):
+                for i in range(len(st_gqrs_tags)):
+                    if tags_list[name_count][i] > chart.data[0]['x'][0]:
+                        chart.layout.shapes[i + name_count*hr_displayed].x0 = \
+                            tags_list[name_count][i]
+                        chart.layout.shapes[i + name_count*hr_displayed].x1 = \
+                            tags_list[name_count][i]
+                    else:
+                        chart.layout.shapes[i + name_count*hr_displayed].x0 = \
+                            tags_list[name_count][-1]
+                        chart.layout.shapes[i + name_count*hr_displayed].x1 = \
+                            tags_list[name_count][-1]
+
+        except Exception:
+            print('error')
+
+        chart_dispay.plotly_chart(figure_or_data=chart)
+        time.sleep(1)

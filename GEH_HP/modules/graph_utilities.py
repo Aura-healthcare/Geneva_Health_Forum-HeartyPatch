@@ -110,13 +110,32 @@ def graph_generation(chart, x, y, slider_y_axis, data_freq):
                   color_discrete_sequence=['green'],
                   render_mode='svg',
                   template='plotly_white',
-                  height=600,
+                  height=800,
                   labels={'x': 'seconds', 'y': 'ECG value'})
     chart.empty()
     chart.plotly_chart(figure_or_data=fig)
 
 
-def fig_generation(x, y, y_axis, data_freq):
+def fig_generation(x, y, y_axis, data_freq, hr_displayed):
+
+    graph_colors = {'ch_gqrs': 'red',
+                    'ch_xqrs': 'blue',
+                    'ch_swt': 'violet',
+                    'ch_hamitlon': 'black'
+                    }
+
+    tick_size = 10
+    y_axis_start_hr = y_axis[1] - 100
+
+    graph_y_axis = {'ch_gqrs': [y_axis_start_hr + tick_size * 3,
+                                y_axis_start_hr + tick_size * 4],
+                    'ch_xqrs': [y_axis_start_hr + tick_size * 2,
+                                y_axis_start_hr + tick_size * 3],
+                    'ch_swt': [y_axis_start_hr + tick_size * 1,
+                               y_axis_start_hr + tick_size * 2],
+                    'ch_hamitlon': [y_axis_start_hr,
+                                    y_axis_start_hr + tick_size * 1]
+                    }
 
     fig = px.line(x=x,
                   y=y,
@@ -127,4 +146,16 @@ def fig_generation(x, y, y_axis, data_freq):
                   template='plotly_white',
                   height=600,
                   labels={'x': 'seconds', 'y': 'ECG value'})
+    for name in ['ch_gqrs', 'ch_xqrs', 'ch_swt', 'ch_hamitlon']:
+        for i in range(hr_displayed):
+            fig.add_shape(type='line',
+                          yref="y",
+                          xref="x",
+                          x0=0,
+                          x1=0,
+                          y0=graph_y_axis[name][0],
+                          y1=graph_y_axis[name][1],
+                          line=dict(color=graph_colors[name], width=10),
+                          name='{}_{}'.format(name, i))
+
     return fig
