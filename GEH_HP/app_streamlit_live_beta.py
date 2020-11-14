@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 from modules.graph_utilities import (generate_graph_data_handler,
                                      fig_generation)
-from modules.sockets_utilities import tcp_server_streamlit
 from modules.RR_detection import compute_heart_rate
 from modules.hrv_analysis import generate_psd_plot_hamilton
 from threading import Thread
@@ -85,11 +84,12 @@ class data_delay(Thread):
 
         while stop_value == 0:
             try:
-                self.graph_data = hp.df
-                print(self.graph_data.tail(2))
+                self.graph_data = thr_tcp_server_st.df
                 time.sleep(self.data_freq)
             except Exception:
                 time.sleep(self.data_freq)
+
+
 
 # Loading graph data handler
 
@@ -181,12 +181,12 @@ if st.sidebar.button(label='Start'):
     # Initializing threads
     print('Waiting for HP connexion')
 
-    thr_tcp_server_st = tcp_server_streamlit()
+    hp = HeartyPatch_TCP_Parser()
     thr_data_delay = data_delay(data_freq=data_freq)
     compute_hr = compute_heart_rate()
     compute_hr_plot = compute_heart_rate()
 
-    thr_tcp_server_st.start()
+    hp.start()
     thr_data_delay.start()
     print('Starting stream\n')
 
