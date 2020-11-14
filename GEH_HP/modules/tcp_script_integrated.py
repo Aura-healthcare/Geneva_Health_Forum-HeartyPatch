@@ -219,7 +219,9 @@ class HeartyPatch_TCP_Parser(Thread):
         max_packets = -1
         max_seconds = 20  # 5 minutes
         hp_host = 'heartypatch.local'
-        self.get_heartypatch_data()
+        self.get_heartypatch_data(max_packets=max_packets,
+                                  max_seconds=max_seconds,
+                                  hp_host=hp_host)
 
 
 if __name__ == "__main__":

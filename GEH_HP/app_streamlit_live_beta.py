@@ -84,7 +84,7 @@ class data_delay(Thread):
 
         while stop_value == 0:
             try:
-                self.graph_data = thr_tcp_server_st.df
+                self.graph_data = hp.df
                 time.sleep(self.data_freq)
             except Exception:
                 time.sleep(self.data_freq)
@@ -182,13 +182,17 @@ if st.sidebar.button(label='Start'):
     print('Waiting for HP connexion')
 
     hp = HeartyPatch_TCP_Parser()
+    hp.start()
+    print('ok')
     thr_data_delay = data_delay(data_freq=data_freq)
     compute_hr = compute_heart_rate()
     compute_hr_plot = compute_heart_rate()
 
-    hp.start()
+ 
     thr_data_delay.start()
     print('Starting stream\n')
+
+    time.sleep(5)
 
     while True:
 
