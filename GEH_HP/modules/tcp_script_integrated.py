@@ -12,10 +12,8 @@
 
 import socket
 import sys
-import signal as sys_signal
 import struct
 import pandas as pd
-import scipy.signal as signal
 import datetime
 from threading import Thread
 
@@ -50,7 +48,12 @@ class HeartyPatch_TCP_Parser(Thread):
 
     min_packet_size = 19
 
-    def __init__(self, hp_host='heartypatch.local', hp_port=4567):
+    def __init__(self,
+                 max_seconds=20,
+                 max_packets=-1,
+                 hp_host='heartypatch.local',
+                 hp_port=4567):
+
         Thread.__init__(self)
         self.state = self.CESState_Init
         self.data = bytes()
@@ -63,10 +66,14 @@ class HeartyPatch_TCP_Parser(Thread):
         self.all_rtor = []
         self.all_hr = []
         self.all_ecg = []
-        self.df = pd.DataFrame(columns=['timestamp', 'ECG'])
+        self.df = pd.DataFrame(columns=['timestamp'], data=[0])
+        self.df['ECG'] = 0
 
         self.hp_host = hp_host
         self.hp_port = hp_port
+
+        self.max_packets = max_packets
+        self.max_seconds = max_seconds  # 5 minutes
 
         # Try connecting, if not close the conection and restart
 
@@ -82,11 +89,7 @@ class HeartyPatch_TCP_Parser(Thread):
             self.sock = socket.create_connection((self.hp_host, self.hp_port))
             print('Socket created after attempt\n')
 
-
-    def get_heartypatch_data(self,
-            max_packets=10000,
-            hp_host='heartypatch.local',
-            max_seconds=5):
+    def get_heartypatch_data(self):
 
         global tStart
 
@@ -98,14 +101,13 @@ class HeartyPatch_TCP_Parser(Thread):
         txt = self.sock.recv(16*1024)  # discard any initial results
         tStart = datetime.datetime.today()
 
-        while max_packets == -1 or self.packet_count < max_packets:
+        while self.max_packets == -1 or self.packet_count < self.max_packets:
 
             txt = self.sock.recv(16*1024)
             self.add_data(txt)
             self.process_packets()
 
             i += 1
-            print(i)
 
             tcp_reads += 1
             if tcp_reads % 50 == 0:
@@ -118,10 +120,14 @@ class HeartyPatch_TCP_Parser(Thread):
                 sys.stdout.flush()
 
             if datetime.datetime.today() - tStart > (
-            datetime.timedelta(seconds=max_seconds)):
+                    datetime.timedelta(seconds=self.max_seconds)):
                 break
 
         self.sock.close()
+        print('connexion closed')
+        self.df.to_csv('data/records/df - {}.csv'.format(
+                            tStart.strftime('%Y-%m-%d - %H-%M-%S')),
+                       index=False)
 
     def add_data(self, new_data):
         self.data += new_data
@@ -202,13 +208,17 @@ class HeartyPatch_TCP_Parser(Thread):
                 retrieved_data = 1
 
                 # Process Sequence ID
+
+                timestamp = self.all_ts[-1]
+
                 while ptr < pkt_len:
                     ecg = struct.unpack('<i', payload[ptr:ptr+4])[0] / 1000.0
                     self.all_ecg.append(ecg)
                     retrieved_data += 1
-                    self.df = self.df.append({'timestamp': self.all_ts[-1],
+                    self.df = self.df.append({'timestamp': timestamp,
                                               'ECG': ecg}, ignore_index=True)
                     ptr += self.ces_pkt_ecg_bytes
+                    timestamp += 1/128
 
                 self.packet_count += 1
                 self.state = self.CESState_Init
@@ -216,12 +226,7 @@ class HeartyPatch_TCP_Parser(Thread):
                 self.data = self.data[self.CES_CMDIF_PKT_OVERHEAD+pkt_len+2:]
 
     def run(self):
-        max_packets = -1
-        max_seconds = 20  # 5 minutes
-        hp_host = 'heartypatch.local'
-        self.get_heartypatch_data(max_packets=max_packets,
-                                  max_seconds=max_seconds,
-                                  hp_host=hp_host)
+        self.get_heartypatch_data()
 
 
 if __name__ == "__main__":
@@ -259,9 +264,5 @@ if __name__ == "__main__":
             print('Unknown argument' + str(sys.argv[i]))
             break
 
-
-
-    # Class initialisation and start of streaming
-#   tcp_client_st = tcp_client_streamlit()
-    hp = HeartyPatch_TCP_Parser()
+    hp = HeartyPatch_TCP_Parser(max_seconds=60)
     hp.start()

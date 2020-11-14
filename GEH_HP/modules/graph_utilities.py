@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import plotly.express as px
-# from graph_utilities.py import tcp_server_streamlit
+import plotly.graph_objects as go
 
 
 class generate_graph_data_handler():
@@ -118,9 +118,9 @@ def graph_generation(chart, x, y, slider_y_axis, data_freq):
 
 def fig_generation(x, y, y_axis, data_freq, hr_displayed):
 
-    graph_colors = {'ch_gqrs': 'red',
+    graph_colors = {'ch_gqrs': 'violet',
                     'ch_xqrs': 'blue',
-                    'ch_swt': 'violet',
+                    'ch_swt': 'red',
                     'ch_hamitlon': 'black'
                     }
 
@@ -146,7 +146,7 @@ def fig_generation(x, y, y_axis, data_freq, hr_displayed):
                   template='plotly_white',
                   height=600,
                   labels={'x': 'seconds', 'y': 'ECG value'})
-    for name in ['ch_gqrs', 'ch_xqrs', 'ch_swt', 'ch_hamitlon']:
+    for name in ['ch_xqrs', 'ch_swt', 'ch_hamitlon']:
         for i in range(hr_displayed):
             fig.add_shape(type='line',
                           yref="y",
@@ -157,5 +157,29 @@ def fig_generation(x, y, y_axis, data_freq, hr_displayed):
                           y1=graph_y_axis[name][1],
                           line=dict(color=graph_colors[name], width=10),
                           name='{}_{}'.format(name, i))
+    
+
+    return fig
+
+
+def generation_hr_graph(df_hr, start_frame, end_frame):
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(x=df_hr['timestamp'],
+                             y=df_hr['xqrs'],
+                             mode='lines',
+                             name='xqrs'))
+    fig.add_trace(go.Scatter(x=df_hr['timestamp'],
+                             y=df_hr['swt'],
+                             mode='lines',
+                             name='swt'))
+    fig.add_trace(go.Scatter(x=df_hr['timestamp'],
+                             y=df_hr['hamilton'],
+                             mode='lines',
+                             name='hamilton'))
+    fig.update_layout(xaxis=dict(range=[int(round(start_frame, 0)),
+                                 int(round(end_frame, 0))]),
+                      template='plotly_white')
 
     return fig
