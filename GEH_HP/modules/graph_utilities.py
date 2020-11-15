@@ -105,13 +105,13 @@ class generate_graph_data_handler():
 def graph_generation(chart, x, y, slider_y_axis, data_freq):
     fig = px.line(x=x*data_freq,
                   y=y,
-                  title='Live EEG',
+                  title='Real Time EEG Display',
                   range_y=slider_y_axis,
                   color_discrete_sequence=['green'],
                   render_mode='svg',
                   template='plotly_white',
                   height=800,
-                  labels={'x': 'seconds', 'y': 'ECG value'})
+                  labels={'x': 'Seconds', 'y': 'ECG'})
     chart.empty()
     chart.plotly_chart(figure_or_data=fig)
 
@@ -139,13 +139,13 @@ def fig_generation(x, y, y_axis, data_freq, hr_displayed):
 
     fig = px.line(x=x,
                   y=y,
-                  title='Live EEG',
+                  title='Real time EEG',
                   range_y=y_axis,
                   color_discrete_sequence=['green'],
                   render_mode='svg',
                   template='plotly_white',
                   height=600,
-                  labels={'x': 'seconds', 'y': 'ECG value'})
+                  labels={'x': 'Seconds', 'y': 'Real Time ECG'})
     for name in ['ch_xqrs', 'ch_swt', 'ch_hamitlon']:
         for i in range(hr_displayed):
             fig.add_shape(type='line',
@@ -157,7 +157,6 @@ def fig_generation(x, y, y_axis, data_freq, hr_displayed):
                           y1=graph_y_axis[name][1],
                           line=dict(color=graph_colors[name], width=10),
                           name='{}_{}'.format(name, i))
-    
 
     return fig
 
@@ -180,6 +179,35 @@ def generation_hr_graph(df_hr, start_frame, end_frame):
                              name='hamilton'))
     fig.update_layout(xaxis=dict(range=[int(round(start_frame, 0)),
                                  int(round(end_frame, 0))]),
-                      template='plotly_white')
+                      yaxis=dict(range=[40, 140]),
+                      template='plotly_white',
+                      title='Real Time Heart Rate',
+                      xaxis_title='Seconds',
+                      yaxis_title='Heart Rate (bpm)')
+
+    return fig
+
+
+def generation_hf_lf_graph(df_hf_lf, start_frame, end_frame):
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(x=df_hf_lf['timestamp'],
+                             y=df_hf_lf['hf'],
+                             mode='lines',
+                             name='% HF'))
+    fig.add_trace(go.Scatter(x=df_hf_lf['timestamp'],
+                             y=df_hf_lf['lf'],
+                             mode='lines',
+                             name='% LF'))
+
+    fig.update_layout(xaxis=dict(range=[int(round(start_frame, 0)),
+                                 int(round(end_frame, 0))]),
+                      yaxis=dict(range=[0, 100]),
+                      template='plotly_white',
+                      title='Real Time HF/LF ratio',
+                      xaxis_title='Seconds',
+                      yaxis_title='Proportion (%)'
+                      )
 
     return fig
