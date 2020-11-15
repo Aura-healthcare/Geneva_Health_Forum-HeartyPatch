@@ -152,10 +152,12 @@ if st.sidebar.button(label='Start'):
     df_hf_lf = pd.DataFrame(columns=['timestamp', 'hf', 'lf'])
 
     chart = fig_generation(x, y, y_axis, data_freq, hr_delay)
-    chart_dispay = st.plotly_chart(figure_or_data=chart)
-    chart_hr = st.empty()
-    chart_hf_lf = st.empty()
- 
+    chart_dispay = st.plotly_chart(figure_or_data=chart,
+                                   use_container_width=True)
+    st_col1, st_col2 = st.beta_columns(2)
+    chart_hr = st_col1.empty()
+    chart_hf_lf = st_col2.empty()
+
     compute_hr = compute_heart_rate()
     compute_hr_plot = compute_heart_rate()
     print('Starting stream\n')
@@ -186,13 +188,13 @@ if st.sidebar.button(label='Start'):
             # Compute on last two minutes
             compute_hr_plot.compute(df_input=hp.df[120*128])
             generate_psd_plot_hamilton(data=compute_hr_plot.data,
-                                        sampling_frequency=(
-                                            heartypach_frequency))
+                                       sampling_frequency=(
+                                           heartypach_frequency))
             image = Image.open('data/records/PSD - lomb.png')
             st.image(image,
-                        caption='Duration of recording : {}'.format(
-                            str(trigger_timestamp-starting_timestamp)),
-                        use_column_width=True)
+                     caption='Duration of recording : {}'.format(
+                        str(trigger_timestamp-starting_timestamp)),
+                     use_column_width=True)
 
             trigger_timestamp += datetime.timedelta(seconds=60)
             print('PSD graph generated')
@@ -203,12 +205,11 @@ if st.sidebar.button(label='Start'):
             swt_value = compute_hr.data['swt']['hr'][-1]
             hamilton_value = compute_hr.data['hamilton']['hr'][-1]
 
-            df_hr = df_hr.append({'timestamp': spot_df['timestamp'].  # \
-                                    values[-1],
-                                    'xqrs': xqrs_value,
-                                    'swt': swt_value,
-                                    'hamilton': hamilton_value},
-                                    ignore_index=True)
+            df_hr = df_hr.append({'timestamp': spot_df['timestamp'].values[-1],
+                                  'xqrs': xqrs_value,
+                                  'swt': swt_value,
+                                  'hamilton': hamilton_value},
+                                 ignore_index=True)
 
             start_frame = chart.data[0]['x'][0]
             end_frame = chart.data[0]['x'][-1]
@@ -216,7 +217,8 @@ if st.sidebar.button(label='Start'):
             chart_hr.plotly_chart(figure_or_data=generation_hr_graph(
                 df_hr[df_hr['timestamp'] >= start_frame],
                 start_frame=start_frame,
-                end_frame=end_frame))
+                end_frame=end_frame),
+                use_container_width=True)
 
         except Exception:
             print('Cannot compute hr_values')
@@ -233,12 +235,12 @@ if st.sidebar.button(label='Start'):
                                         values[-1],
                                         'hf': hf_value,
                                         'lf': lf_value},
-                                        ignore_index=True)
+                                       ignore_index=True)
 
             chart_hf_lf.plotly_chart(figure_or_data=generation_hf_lf_graph(
                 df_hf_lf[df_hf_lf['timestamp'] >= start_frame],
                 start_frame=start_frame,
-                end_frame=end_frame))
+                end_frame=end_frame), use_container_width=True)
 
         except Exception:
             print('Cannot compute HF/LF')
@@ -252,16 +254,16 @@ if st.sidebar.button(label='Start'):
                 -hr_delay:])
 
             tags_list = [st_xqrs_tags,
-                        st_swt_tags,
-                        st_hamilton_tags]
+                         st_swt_tags,
+                         st_hamilton_tags]
 
             for name_count in range(len(tags_list)):
                 for i in range(len(tags_list[name_count])):
-                        if tags_list[name_count][i] > chart.data[0]['x'][0]:
-                            chart.layout.shapes[i + name_count*hr_delay]\
-                                .x0 = tags_list[name_count][i]
-                            chart.layout.shapes[i + name_count*hr_delay]\
-                                .x1 = tags_list[name_count][i]
+                    if tags_list[name_count][i] > chart.data[0]['x'][0]:
+                        chart.layout.shapes[i + name_count*hr_delay]\
+                            .x0 = tags_list[name_count][i]
+                        chart.layout.shapes[i + name_count*hr_delay]\
+                            .x1 = tags_list[name_count][i]
         except Exception:
             print('bad beat marker generation at {}:{}'.format(
                 name_count, i))

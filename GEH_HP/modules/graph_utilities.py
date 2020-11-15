@@ -144,7 +144,6 @@ def fig_generation(x, y, y_axis, data_freq, hr_displayed):
                   color_discrete_sequence=['green'],
                   render_mode='svg',
                   template='plotly_white',
-                  height=600,
                   labels={'x': 'Seconds', 'y': 'Real Time ECG'})
     for name in ['ch_xqrs', 'ch_swt', 'ch_hamitlon']:
         for i in range(hr_displayed):
